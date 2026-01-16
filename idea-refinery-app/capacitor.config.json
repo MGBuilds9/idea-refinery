@@ -2,13 +2,7 @@
   "appId": "com.idarefinery.app",
   "appName": "IdeaRefinery",
   "webDir": "dist",
-  "server": {
-    "url": "https://ideas.mkgbuilds.com",
-    "cleartext": false,
-    "allowNavigation": [
-      "ideas.mkgbuilds.com"
-    ]
-  },
+
   "ios": {
     "contentInset": "always"
   }
