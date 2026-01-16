@@ -1,7 +1,9 @@
-import React from 'react';
-import { History, Trash2, ArrowRight, Calendar, Mail } from 'lucide-react';
+import React, { useState } from 'react';
+import { History, Trash2, ArrowRight, Calendar, Mail, Loader2, Check } from 'lucide-react';
 
 export default function HistoryView({ historyItems, onLoad, onDelete }) {
+  const [emailingId, setEmailingId] = useState(null);
+  const [emailSuccess, setEmailSuccess] = useState(null);
   
   // Format timestamp
   const formatDate = (ts) => {
@@ -13,6 +15,56 @@ export default function HistoryView({ historyItems, onLoad, onDelete }) {
       hour: '2-digit',
       minute: '2-digit'
     });
+  };
+
+  // Get artifact type and content for email
+  const getArtifactContent = (item) => {
+    if (item.blueprint) {
+      return { type: 'Blueprint', content: item.blueprint };
+    } else if (item.questions) {
+      const questionsText = Array.isArray(item.questions) 
+        ? item.questions.map((q, i) => `${i + 1}. ${q}`).join('\n')
+        : item.questions;
+      return { type: 'Questions', content: questionsText };
+    } else {
+      return { type: 'Draft', content: item.idea };
+    }
+  };
+
+  const handleEmail = async (e, item) => {
+    e.stopPropagation();
+    const { type, content } = getArtifactContent(item);
+    
+    if (!confirm(`Email this ${type.toLowerCase()} to yourself?`)) return;
+    
+    setEmailingId(item.id);
+    setEmailSuccess(null);
+    
+    try {
+      const target = localStorage.getItem('target_email');
+      if (!target) {
+        alert('Please set a Target Email in Settings first.');
+        setEmailingId(null);
+        return;
+      }
+
+      const { EmailService } = await import('../services/email');
+      const html = `
+        <h1>Project: ${item.idea || 'Untitled'}</h1>
+        <p><strong>Type:</strong> ${type}</p>
+        <p><strong>Date:</strong> ${new Date().toLocaleString()}</p>
+        <hr/>
+        <pre style="white-space: pre-wrap; font-family: monospace;">${content}</pre>
+      `;
+      await EmailService.send(target, `${type}: ${item.idea || 'Untitled'}`, html);
+      setEmailSuccess(item.id);
+      setTimeout(() => setEmailSuccess(null), 2000);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to send email. Check Settings.');
+    } finally {
+      setEmailingId(null);
+    }
   };
 
   return (
@@ -53,33 +105,27 @@ export default function HistoryView({ historyItems, onLoad, onDelete }) {
                 </p>
               </div>
 
-              <div className="flex items-center gap-2 self-center opacity-0 group-hover:opacity-100 transition-opacity">
-                {item.blueprint && (
-                   <button
-                        onClick={async (e) => {
-                            e.stopPropagation();
-                            if (!confirm('Email this blueprint to yourself?')) return;
-                            try {
-                                const { EmailService } = await import('../services/email');
-                                const html = `
-                                    <h1>Project: ${item.idea}</h1>
-                                    <p>Date: ${new Date().toLocaleString()}</p>
-                                    <hr/>
-                                    <pre style="white-space: pre-wrap;">${item.blueprint}</pre>
-                                `;
-                                await EmailService.send('test@example.com', `Blueprint: ${item.idea}`, html);
-                                alert('Email Sent!');
-                            } catch (err) {
-                                console.error(err);
-                                alert('Failed to send email. Check Settings.');
-                            }
-                        }}
-                        className="p-3 text-gray-500 hover:text-[#D4AF37] hover:bg-[#D4AF37]/10 rounded-lg transition-colors"
-                        title="Email Blueprint"
-                    >
-                        <Mail className="w-5 h-5" />
-                    </button>
-                )}
+              {/* Action buttons - always visible with subtle styling */}
+              <div className="flex items-center gap-2 self-center">
+                {/* Email button - works for all artifact types */}
+                <button
+                  onClick={(e) => handleEmail(e, item)}
+                  disabled={emailingId === item.id}
+                  className={`p-3 rounded-lg transition-all ${
+                    emailSuccess === item.id 
+                      ? 'text-green-400 bg-green-900/20' 
+                      : 'text-gray-500 hover:text-[#D4AF37] hover:bg-[#D4AF37]/10'
+                  } ${emailingId === item.id ? 'opacity-50 cursor-wait' : ''}`}
+                  title="Email to Me"
+                >
+                  {emailingId === item.id ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : emailSuccess === item.id ? (
+                    <Check className="w-5 h-5" />
+                  ) : (
+                    <Mail className="w-5 h-5" />
+                  )}
+                </button>
 
                 <button
                   onClick={(e) => {

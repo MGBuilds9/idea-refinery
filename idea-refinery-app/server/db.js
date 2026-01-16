@@ -37,6 +37,17 @@ const initDb = async () => {
           content TEXT NOT NULL,
           updated_at TIMESTAMPTZ DEFAULT now()
         );
+
+        CREATE TABLE IF NOT EXISTS public_blueprints (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+          title TEXT,
+          content TEXT NOT NULL,
+          created_at TIMESTAMPTZ DEFAULT now(),
+          expires_at TIMESTAMPTZ,
+          view_count INT DEFAULT 0
+        );
+        CREATE INDEX IF NOT EXISTS idx_public_blueprints_id ON public_blueprints(id);
       `);
       
       // Seed default admin if no users exist

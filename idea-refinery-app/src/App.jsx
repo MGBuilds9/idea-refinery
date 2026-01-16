@@ -10,6 +10,8 @@ import LoginScreen from './components/LoginScreen';
 import OnboardingView from './components/OnboardingView';
 import PromptStudio from './components/PromptStudio';
 import TokenUsage from './components/TokenUsage';
+import { PROMPT_PERSONAS } from './components/PromptSelector';
+import PublicBlueprintView from './components/PublicBlueprintView';
 
 // Lazy load heavy stages
 const BlueprintStage = React.lazy(() => import('./components/BlueprintStage'));
@@ -52,13 +54,34 @@ function App() {
   const [chatHistory, setChatHistory] = useState([]); 
   const [refinementInput, setRefinementInput] = useState('');
   const [blueprintTab, setBlueprintTab] = useState('preview');
+  const [selectedPersona, setSelectedPersona] = useState('balanced');
+  const [publicBlueprintId, setPublicBlueprintId] = useState(null);
 
   // Currently selected provider
   // const [provider, setProvider] = useState(llm.getDefaultProvider()); // Unused state, fetching dynamically
 
+  // Initializing state for the app
+  const [initializing, setInitializing] = useState(true);
+
+  // Check for public share URL on mount
+  useEffect(() => {
+    const path = window.location.pathname;
+    // Format: /public/:id
+    if (path.startsWith('/public/')) {
+        const id = path.split('/public/')[1];
+        if (id) {
+            setPublicBlueprintId(id);
+            setInitializing(false); // If public blueprint, no need for other checks
+            return;
+        }
+    }
+    setInitializing(false); // If not public blueprint, proceed with normal initialization
+  }, []);
 
   // DB Checks and PIN Lock
   useEffect(() => {
+    if (publicBlueprintId) return; // Skip if public blueprint is active
+
     const checkPinLock = async () => {
       try {
         // v1.2: Check local storage for PIN first
@@ -90,7 +113,7 @@ function App() {
     } else {
         setCheckingLock(false);
     }
-  }, [isOnboarding]);
+  }, [isOnboarding, publicBlueprintId]);
 
   const handleUnlock = async (pin) => {
     // Verify PIN against localStorage
@@ -192,7 +215,7 @@ function App() {
         setCurrentDbId(id);
 
         // Sync to server
-        const serverUrl = localStorage.getItem('serverUrl');
+        const serverUrl = localStorage.getItem('server_url');
         if (serverUrl) {
            SyncService.push(serverUrl, { ...fullData, id }).catch(console.error);
         }
@@ -219,13 +242,17 @@ function App() {
     if (!checkApiKey()) return;
     setLoading(true);
     setLoadingMessage('Generating questions...');
-    setLoadingMessage('Generating questions...');
     try {
       const { system, prompt } = PromptService.get('questions', { idea });
+      
+      // Apply persona modifier
+      const persona = PROMPT_PERSONAS.find(p => p.id === selectedPersona);
+      const enhancedSystem = persona ? `${system}\n\nSTYLE DIRECTIVE: ${persona.modifier}` : system;
+      
       const currentProvider = llm.getDefaultProvider();
       const model = llm.getModelForStage('questions');
       const responseText = await llm.generate(currentProvider, {
-        system,
+        system: enhancedSystem,
         prompt,
         model
       });
@@ -267,10 +294,15 @@ function App() {
       // First pass
       setLoadingMessage('Generating blueprint...');
       const { system, prompt } = PromptService.get('blueprint', { idea, questions, answers });
+      
+      // Apply persona modifier
+      const persona = PROMPT_PERSONAS.find(p => p.id === selectedPersona);
+      const enhancedSystem = persona ? `${system}\n\nSTYLE DIRECTIVE: ${persona.modifier}` : system;
+      
       const currentProvider = llm.getDefaultProvider();
       const model = llm.getModelForStage('blueprint');
       let responseText = await llm.generate(currentProvider, {
-        system,
+        system: enhancedSystem,
         prompt,
         model,
         maxTokens: 8000
@@ -373,7 +405,6 @@ function App() {
     setLoading(true);
     setLoadingMessage('Generating mockup...');
     setStage('mockup');
-    setStage('mockup');
     try {
       const { system, prompt } = PromptService.get('mockup', { blueprint });
       const currentProvider = llm.getDefaultProvider();
@@ -448,7 +479,20 @@ function App() {
 
   return (
     <>
-      {checkingLock && (
+      {initializing && (
+        <div className="min-h-screen bg-[#09090b] flex items-center justify-center">
+          <div className="text-center">
+            <div className="text-[#D4AF37] text-4xl mb-4 animate-bounce">⚡</div>
+            <p className="text-gray-400 font-mono text-sm">Refining Idea Space...</p>
+          </div>
+        </div>
+      )}
+
+      {!initializing && publicBlueprintId && (
+        <PublicBlueprintView blueprintId={publicBlueprintId} />
+      )}
+
+      {!initializing && !publicBlueprintId && checkingLock && (
         <div className="min-h-screen bg-[#1A1A1A] flex items-center justify-center">
           <div className="flex flex-col items-center">
              <Sparkles className="w-8 h-8 text-[#D4AF37] animate-pulse mb-4" />
@@ -457,12 +501,12 @@ function App() {
         </div>
       )}
 
-      {!checkingLock && isOnboarding && (
+      {!initializing && !publicBlueprintId && !checkingLock && isOnboarding && (
         <OnboardingView onComplete={handleOnboardingComplete} />
       )}
 
-      {/* Main App Flow (Only if not onboarding) */}
-      {!checkingLock && !isOnboarding && (
+      {/* Main App Flow (Only if not onboarding or public blueprint) */}
+      {!initializing && !publicBlueprintId && !checkingLock && !isOnboarding && (
        <>
          {!isAuthenticated && (
            <LoginScreen onLogin={handleLogin} />
@@ -535,6 +579,8 @@ function App() {
                                 idea={idea} 
                                 setIdea={setIdea} 
                                 onNext={handleGenerateQuestions}
+                                selectedPersona={selectedPersona}
+                                setSelectedPersona={setSelectedPersona}
                             />
                         )}
 
@@ -575,6 +621,7 @@ function App() {
                                 setRefinementInput={setRefinementInput}
                                 currentTab={blueprintTab}
                                 setTab={setBlueprintTab}
+                                chatHistory={chatHistory}
                                 />
                             </Suspense>
                         )}

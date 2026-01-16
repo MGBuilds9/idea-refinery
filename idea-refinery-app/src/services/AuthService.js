@@ -4,7 +4,7 @@
 export const AuthService = {
   // Get stored auth token
   getToken() {
-    return localStorage.getItem('authToken');
+    return localStorage.getItem('auth_token');
   },
 
   // Get stored username
@@ -38,9 +38,9 @@ export const AuthService = {
       const { token } = await response.json();
       
       // Store token and username
-      localStorage.setItem('authToken', token);
+      localStorage.setItem('auth_token', token);
       localStorage.setItem('username', username);
-      localStorage.setItem('serverUrl', serverUrl);
+      localStorage.setItem('server_url', serverUrl);
       
       return { success: true, token };
     } catch (error) {
@@ -51,9 +51,9 @@ export const AuthService = {
 
   // Logout (clear token)
   logout() {
-    localStorage.removeItem('authToken');
+    localStorage.removeItem('auth_token');
     localStorage.removeItem('username');
-    // Keep serverUrl for convenience
+    // Keep server_url for convenience
   },
 
   // Change password
@@ -89,6 +89,6 @@ export const AuthService = {
 
   // Get server URL from storage
   getServerUrl() {
-    return localStorage.getItem('serverUrl') || '';
+    return localStorage.getItem('server_url') || '';
   }
 };

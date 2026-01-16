@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { Send, Sparkles } from 'lucide-react';
-// import { pushItem } from '../services/db';
-// import { v4 as uuidv4 } from 'uuid';
+import PromptSelector from './PromptSelector';
 
-export default function InputStage({ idea, setIdea, onNext }) {
+export default function InputStage({ idea, setIdea, onNext, selectedPersona, setSelectedPersona }) {
   const [isFocused, setIsFocused] = useState(false);
 
   const handleSubmit = async () => {
@@ -13,6 +12,12 @@ export default function InputStage({ idea, setIdea, onNext }) {
 
   return (
     <div className="min-h-[80vh] flex flex-col items-center justify-center px-4">
+      {/* Prompt Persona Selector */}
+      <PromptSelector 
+        selectedPersona={selectedPersona} 
+        onSelect={setSelectedPersona} 
+      />
+      
       <div 
         className={`w-full max-w-2xl transition-all duration-700 ${isFocused ? 'scale-105' : 'scale-100'}`}
       >

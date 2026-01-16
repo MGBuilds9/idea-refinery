@@ -3,6 +3,25 @@ import { Shield, Key, Server, Lock, ArrowRight, Check, Loader2 } from 'lucide-re
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
 
+// API Key format validation patterns
+const API_KEY_PATTERNS = {
+  openai: {
+    regex: /^sk-(proj-)?[A-Za-z0-9_-]{32,}$/,
+    hint: 'OpenAI keys start with "sk-" or "sk-proj-" (40+ characters)',
+    example: 'sk-proj-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+  },
+  anthropic: {
+    regex: /^sk-ant-[A-Za-z0-9_-]{90,}$/,
+    hint: 'Anthropic keys start with "sk-ant-" (100+ characters)',
+    example: 'sk-ant-api03-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx...'
+  },
+  gemini: {
+    regex: /^[A-Za-z0-9_-]{39}$/,
+    hint: 'Gemini keys are 39 alphanumeric characters',
+    example: 'AIzaSyxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+  }
+};
+
 export default function OnboardingView({ onComplete }) {
   const [step, setStep] = useState(1);
   const [apiKey, setApiKey] = useState('');
@@ -17,13 +36,29 @@ export default function OnboardingView({ onComplete }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Check if API key format is valid for current provider
+  const isKeyFormatValid = () => {
+    if (!apiKey || apiKey.length < 10) return false;
+    const pattern = API_KEY_PATTERNS[provider];
+    return pattern ? pattern.regex.test(apiKey) : apiKey.length >= 10;
+  };
+
   // Step 1: API Key Validation
   const validateApiKey = async () => {
     setLoading(true);
     setError('');
-    // Mock validation or minimal call. For now, basic length check + storing it.
+    
+    // Provider-specific format validation
+    const pattern = API_KEY_PATTERNS[provider];
+    if (pattern && !pattern.regex.test(apiKey)) {
+      setError(`Invalid ${provider} API key format. ${pattern.hint}`);
+      setLoading(false);
+      return;
+    }
+    
+    // Fallback: basic length check
     if (apiKey.length < 10) {
-      setError('Invalid API Key format');
+      setError('API key is too short');
       setLoading(false);
       return;
     }
@@ -172,10 +207,18 @@ export default function OnboardingView({ onComplete }) {
                         type="password"
                         value={apiKey}
                         onChange={(e) => setApiKey(e.target.value)}
-                        placeholder="sk-..."
-                        className="w-full bg-[#09090b] border border-[#333] rounded-lg p-3 pl-10 text-white focus:border-[#d4af37] outline-none"
+                        placeholder={API_KEY_PATTERNS[provider]?.example || 'sk-...'}
+                        className={`w-full bg-[#09090b] border rounded-lg p-3 pl-10 pr-10 text-white focus:border-[#d4af37] outline-none ${
+                          apiKey && (isKeyFormatValid() ? 'border-emerald-500/50' : 'border-[#333]')
+                        }`}
                       />
+                      {apiKey && isKeyFormatValid() && (
+                        <Check className="absolute right-3 top-3.5 w-4 h-4 text-emerald-400" />
+                      )}
                     </div>
+                    <p className="text-xs text-gray-500 mt-1.5">
+                      {API_KEY_PATTERNS[provider]?.hint || 'Enter your API key'}
+                    </p>
                   </div>
                   {error && <p className="text-red-400 text-sm">{error}</p>}
                 </div>

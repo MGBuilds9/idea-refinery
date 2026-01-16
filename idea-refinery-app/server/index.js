@@ -79,6 +79,7 @@ app.use(express.json({ limit: '50mb' }));
 
 // Serve static files from the dist directory
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -90,6 +91,33 @@ const __dirname = path.dirname(__filename);
 // In dev, we run vite separately. In prod (Docker), we serve dist.
 // Let's resolve 'dist' relative to the project root.
 const distPath = path.resolve(__dirname, '../dist');
+
+// DEBUG: Log dist path and contents to verify Docker copy
+console.log('📂 Serving static files from:', distPath);
+if (fs.existsSync(distPath)) {
+  console.log('✅ Dist directory exists.');
+  try {
+    const files = fs.readdirSync(distPath);
+    console.log('📄 Files in dist:', files);
+    const assetsPath = path.join(distPath, 'assets');
+    if (fs.existsSync(assetsPath)) {
+      console.log('📄 Files in dist/assets:', fs.readdirSync(assetsPath));
+    } else {
+      console.warn('⚠️  dist/assets directory missing!');
+    }
+  } catch (e) {
+    console.error('❌ Error listing dist files:', e);
+  }
+} else {
+  console.error('❌ Dist directory does NOT exist at:', distPath);
+}
+
+// Explicitly handle assets to avoid falling back to index.html for missing JS/CSS
+// This prevents the "MIME type text/html" error when a script is 404.
+app.use('/assets', express.static(path.join(distPath, 'assets'), {
+  fallthrough: false // Disable fallback - return 404 immediately if not found
+}));
+
 app.use(express.static(distPath));
 
 // Health check
@@ -454,11 +482,145 @@ app.post('/api/gemini', async (req, res) => {
   }
 });
 
+// ===== PUBLIC SHARE ENDPOINTS =====
+
+// POST /api/public/publish - Create a public share (authenticated)
+app.post('/api/public/publish', authenticateToken, async (req, res) => {
+  const { title, content, expiresInDays } = req.body;
+  const userId = req.user.id;
+
+  if (!content) {
+    return res.status(400).json({ error: 'Content is required' });
+  }
+
+  try {
+    const expiresAt = expiresInDays 
+      ? new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000) 
+      : null;
+
+    const result = await pool.query(
+      `INSERT INTO public_blueprints (user_id, title, content, expires_at)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, created_at, expires_at`,
+      [userId, title || 'Untitled Blueprint', content, expiresAt]
+    );
+
+    const blueprint = result.rows[0];
+    const publicUrl = `/public/${blueprint.id}`;
+
+    res.json({ 
+      success: true, 
+      id: blueprint.id,
+      url: publicUrl,
+      expiresAt: blueprint.expires_at
+    });
+  } catch (e) {
+    console.error('Publish error:', e);
+    res.status(500).json({ error: 'Failed to publish blueprint' });
+  }
+});
+
+// GET /api/public/:id - View a public blueprint (no auth required)
+app.get('/api/public/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Check if blueprint exists and is not expired
+    const result = await pool.query(
+      `SELECT id, title, content, created_at, expires_at, view_count
+       FROM public_blueprints 
+       WHERE id = $1 AND (expires_at IS NULL OR expires_at > NOW())`,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Blueprint not found or expired' });
+    }
+
+    // Increment view count
+    await pool.query(
+      'UPDATE public_blueprints SET view_count = view_count + 1 WHERE id = $1',
+      [id]
+    );
+
+    const blueprint = result.rows[0];
+    res.json({
+      id: blueprint.id,
+      title: blueprint.title,
+      content: blueprint.content,
+      createdAt: blueprint.created_at,
+      expiresAt: blueprint.expires_at,
+      viewCount: blueprint.view_count + 1
+    });
+  } catch (e) {
+    console.error('Public view error:', e);
+    res.status(500).json({ error: 'Failed to retrieve blueprint' });
+  }
+});
+
+// DELETE /api/public/:id - Delete a public share (authenticated, owner only)
+app.delete('/api/public/:id', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user.id;
+
+  try {
+    const result = await pool.query(
+      'DELETE FROM public_blueprints WHERE id = $1 AND user_id = $2 RETURNING id',
+      [id, userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Blueprint not found or not owned by you' });
+    }
+
+    res.json({ success: true, deleted: id });
+  } catch (e) {
+    console.error('Delete public blueprint error:', e);
+    res.status(500).json({ error: 'Failed to delete blueprint' });
+  }
+});
+
+// GET /api/public/my/list - List user's published blueprints (authenticated)
+app.get('/api/public/my/list', authenticateToken, async (req, res) => {
+  const userId = req.user.id;
+
+  try {
+    const result = await pool.query(
+      `SELECT id, title, created_at, expires_at, view_count
+       FROM public_blueprints 
+       WHERE user_id = $1
+       ORDER BY created_at DESC`,
+      [userId]
+    );
+
+    res.json(result.rows);
+  } catch (e) {
+    console.error('List public blueprints error:', e);
+    res.status(500).json({ error: 'Failed to list blueprints' });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`🚀 Proxy server running on http://localhost:${PORT}`);
 });
 
 // All other GET requests not handled before will return our React app
 app.get('*', (req, res) => {
-  res.sendFile(path.resolve(distPath, 'index.html'));
+  // Don't serve index.html for API calls or assets that were missed
+  if (req.path.startsWith('/api') || req.path.startsWith('/assets')) {
+    return res.status(404).send('Not Found');
+  }
+  
+  const indexPath = path.resolve(distPath, 'index.html');
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath, (err) => {
+      if (err) {
+        console.error('❌ Error sending index.html:', err);
+        res.status(500).send('Server Error');
+      }
+    });
+  } else {
+    console.error('❌ index.html not found at:', indexPath);
+    res.status(404).send('Application not built (index.html missing)');
+  }
 });

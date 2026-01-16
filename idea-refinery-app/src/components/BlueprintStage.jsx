@@ -1,5 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { FileText, MessageSquare, Check, Send, Sparkles } from 'lucide-react';
+import ContextIndicator from './ContextIndicator';
 
 export default function BlueprintStage({ 
   blueprint, 
@@ -11,7 +12,8 @@ export default function BlueprintStage({
   refinementInput,
   setRefinementInput,
   currentTab = 'preview', // 'preview' or 'chat'
-  setTab
+  setTab,
+  chatHistory = [] // For context optimization display
 }) {
   const chatEndRef = useRef(null);
 
@@ -21,8 +23,68 @@ export default function BlueprintStage({
     }
   }, [conversation, currentTab]);
 
+  // Publishing State
+  const [publishing, setPublishing] = useState(false);
+  const [showPublishModal, setShowPublishModal] = useState(false);
+  const [publicUrl, setPublicUrl] = useState('');
+  const [copiedUrl, setCopiedUrl] = useState(false);
+
+  const handlePublish = async () => {
+    if (!confirm('Publish this blueprint to a public URL? Anyone with the link can view it.')) return;
+    
+    setPublishing(true);
+    try {
+      const serverUrl = localStorage.getItem('server_url') || 
+        (window.location.hostname === 'localhost' ? 'http://localhost:3001' : window.location.origin);
+      const token = localStorage.getItem('auth_token');
+      
+      if (!token) {
+        alert('You must be logged in to publish.');
+        return;
+      }
+
+      // Extract title from blueprint or use first line
+      const titleMatch = blueprint.match(/^# (.*)/m);
+      const title = titleMatch ? titleMatch[1] : 'Untitled Project';
+
+      const res = await fetch(`${serverUrl}/api/public/publish`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          title,
+          content: blueprint,
+          expiresInDays: 30
+        })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        // Construct full URL
+        const fullUrl = `${window.location.protocol}//${window.location.host}${data.url}`;
+        setPublicUrl(fullUrl);
+        setShowPublishModal(true);
+      } else {
+        throw new Error(data.error || 'Failed to publish');
+      }
+    } catch (e) {
+      console.error(e);
+      alert(`Publishing failed: ${e.message}`);
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  const copyToClipboard = async () => {
+    await navigator.clipboard.writeText(publicUrl);
+    setCopiedUrl(true);
+    setTimeout(() => setCopiedUrl(false), 2000);
+  };
+
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in relative">
       <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-lg overflow-hidden flex flex-col h-[600px]">
         {/* Tab Header */}
         <div className="flex border-b border-slate-700">
@@ -39,10 +101,19 @@ export default function BlueprintStage({
           >
             <MessageSquare className="w-4 h-4" />
             REFINE / CHAT
+            {/* Context indicator in tab when compressed */}
+            {chatHistory.length > 4 && currentTab !== 'chat' && (
+              <span className="text-xs text-amber-400/60">({chatHistory.length})</span>
+            )}
           </button>
         </div>
 
-        {/* Content Area */}
+        {/* Context Optimization Bar - shows when in chat mode with history */}
+        {currentTab === 'chat' && chatHistory.length > 0 && (
+          <div className="px-4 py-2 border-b border-slate-700/50 bg-slate-900/30">
+            <ContextIndicator messages={chatHistory} windowSize={8} />
+          </div>
+        )}
         <div className="flex-1 overflow-hidden relative">
           {currentTab === 'preview' && (
             <div className="h-full overflow-y-auto p-6 bg-slate-900/30">
@@ -136,9 +207,20 @@ export default function BlueprintStage({
       <div className="flex gap-3">
         <button
           onClick={onStartOver}
-          className="flex-1 bg-slate-700 hover:bg-slate-600 text-white py-4 rounded-lg transition-all font-mono"
+          className="bg-slate-700 hover:bg-slate-600 text-white px-6 py-4 rounded-lg transition-all font-mono"
         >
           START OVER
+        </button>
+
+        {/* Publish Button */}
+        <button
+          onClick={handlePublish}
+          disabled={publishing || loading}
+          className="bg-sky-600 hover:bg-sky-700 disabled:bg-slate-700 disabled:text-slate-500 text-white font-medium px-6 py-4 rounded-lg transition-all flex items-center justify-center gap-2 group font-mono"
+          title="Publish to public URL"
+        >
+          {publishing ? <Sparkles className="w-4 h-4 animate-spin" /> : <Globe className="w-4 h-4" />}
+          PUBLISH
         </button>
 
         <button
@@ -150,6 +232,53 @@ export default function BlueprintStage({
           APPROVE & GENERATE MOCKUP
         </button>
       </div>
+
+      {/* Publish Success Modal */}
+      {showPublishModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+          <div className="bg-[#1A1A1A] border border-[#333] rounded-xl p-6 w-full max-w-lg shadow-2xl relative">
+             <button 
+               onClick={() => setShowPublishModal(false)}
+               className="absolute top-4 right-4 text-gray-500 hover:text-white"
+             >
+               <X className="w-5 h-5" />
+             </button>
+
+             <div className="text-center mb-6">
+               <div className="w-16 h-16 bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                 <Globe className="w-8 h-8 text-green-400" />
+               </div>
+               <h3 className="text-xl font-serif text-white mb-2">Blueprint Published!</h3>
+               <p className="text-gray-400 text-sm">Your blueprint is now publicly accessible via the link below.</p>
+             </div>
+
+             <div className="bg-black/50 border border-white/10 rounded-lg p-3 flex items-center gap-3 mb-6">
+                <input 
+                  type="text" 
+                  readOnly 
+                  value={publicUrl}
+                  className="bg-transparent border-none text-gray-300 text-sm font-mono flex-1 focus:ring-0"
+                />
+                <button
+                  onClick={copyToClipboard}
+                  className={`p-2 rounded hover:bg-white/10 transition-colors ${copiedUrl ? 'text-green-400' : 'text-gray-400'}`}
+                  title="Copy Link"
+                >
+                  {copiedUrl ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                </button>
+             </div>
+
+             <div className="flex justify-center">
+               <button
+                  onClick={() => window.open(publicUrl, '_blank')}
+                  className="px-6 py-2 bg-[#D4AF37] hover:bg-[#C5A028] text-black rounded-lg font-medium transition-colors text-sm"
+               >
+                 Open Link
+               </button>
+             </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

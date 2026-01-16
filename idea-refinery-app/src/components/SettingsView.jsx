@@ -87,7 +87,7 @@ export default function SettingsView() {
           stageModels
         });
     
-        localStorage.setItem('serverUrl', serverUrl);
+        localStorage.setItem('server_url', serverUrl);
         
         setSaveStatus('Settings Saved!');
         setTimeout(() => setSaveStatus(''), 2000);
@@ -543,14 +543,33 @@ export default function SettingsView() {
                         className="w-full bg-[#0A0A0A]/60 border border-[#D4AF37]/20 rounded-lg px-4 py-4 text-white focus:border-[#D4AF37]/60 focus:outline-none font-mono text-sm tracking-widest transition-all duration-300 input-glow"
                         />
                      </div>
+
+                     <div>
+                        <label className="block text-xs uppercase text-[#D4AF37] mb-2 font-mono opacity-80">
+                        Target Email (Recipient)
+                        </label>
+                        <input
+                        type="email"
+                        defaultValue={localStorage.getItem('target_email') || ''}
+                        onChange={(e) => {
+                            localStorage.setItem('target_email', e.target.value);
+                        }}
+                        placeholder="you@example.com"
+                        className="w-full bg-[#0A0A0A]/60 border border-[#D4AF37]/20 rounded-lg px-4 py-4 text-white focus:border-[#D4AF37]/60 focus:outline-none font-mono text-sm transition-all duration-300 input-glow"
+                        />
+                     </div>
                      <button
                         onClick={async () => {
                              try {
                                  setSaveStatus('Sending...');
                                  const key = localStorage.getItem('resend_api_key');
+                                 const target = localStorage.getItem('target_email');
+                                 
                                  if (!key) throw new Error('No API Key');
+                                 if (!target) throw new Error('No Target Email set');
+                                 
                                  await import('../services/email').then(m => m.EmailService.send(
-                                     'test@example.com', // To
+                                     target, // To
                                      'Test Email from Idea Refinery',
                                      '<h1>It works!</h1><p>Your email configuration is correct.</p>',
                                      key
@@ -564,7 +583,7 @@ export default function SettingsView() {
                         }}
                         className="text-xs bg-[#333] hover:bg-[#444] text-white px-3 py-2 rounded transition-colors"
                      >
-                        Send Test Email (to owner)
+                        Send Test Email
                      </button>
                 </div>
               </div>
