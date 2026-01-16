@@ -7,7 +7,9 @@ export default function OnboardingView({ onComplete }) {
   const [step, setStep] = useState(1);
   const [apiKey, setApiKey] = useState('');
   const [provider, setProvider] = useState('openai');
-  const [serverUrl, setServerUrl] = useState('http://localhost:3001');
+  const [serverUrl, setServerUrl] = useState(
+    window.location.hostname === 'localhost' ? 'http://localhost:3001' : window.location.origin
+  );
   const [username, setUsername] = useState('admin');
   const [password, setPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');

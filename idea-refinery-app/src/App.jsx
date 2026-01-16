@@ -109,7 +109,8 @@ function App() {
     llm.setActivePin(pin);
     
     // Trigger Sync Pull
-    const serverUrl = localStorage.getItem('server_url') || import.meta.env.VITE_API_URL || 'http://localhost:3001';
+    const serverUrl = localStorage.getItem('server_url') || import.meta.env.VITE_API_URL || 
+       (window.location.hostname === 'localhost' ? 'http://localhost:3001' : window.location.origin);
     pullItems(serverUrl).catch(console.error);
 
     // Initialize Prompt Service (load overrides)

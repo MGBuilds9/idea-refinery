@@ -18,7 +18,8 @@ export default function PromptStudio() {
   const [message, setMessage] = useState('');
 
   const token = localStorage.getItem('auth_token');
-  const serverUrl = localStorage.getItem('server_url') || 'http://localhost:3001';
+  const serverUrl = localStorage.getItem('server_url') || 
+    (window.location.hostname === 'localhost' ? 'http://localhost:3001' : window.location.origin);
 
   // Fetch prompts on mount
   useEffect(() => {
