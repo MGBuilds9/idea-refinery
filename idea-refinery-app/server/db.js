@@ -13,22 +13,30 @@ const initDb = async () => {
     try {
       await client.query(`
         CREATE TABLE IF NOT EXISTS users (
-          id SERIAL PRIMARY KEY,
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
           username TEXT UNIQUE NOT NULL,
           password_hash TEXT NOT NULL,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          created_at TIMESTAMPTZ DEFAULT now()
         );
 
-        CREATE TABLE IF NOT EXISTS sync_data (
-          id SERIAL PRIMARY KEY,
-          user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-          device_id TEXT NOT NULL,
-          data JSONB NOT NULL,
-          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          UNIQUE(user_id)
+        CREATE TABLE IF NOT EXISTS items (
+          id UUID PRIMARY KEY,
+          user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+          type TEXT NOT NULL,
+          content JSONB NOT NULL,
+          version INT DEFAULT 1,
+          updated_at TIMESTAMPTZ DEFAULT now(),
+          deleted BOOLEAN DEFAULT FALSE,
+          UNIQUE(user_id, id)
         );
-        CREATE INDEX IF NOT EXISTS idx_sync_data_user_id ON sync_data(user_id);
-        CREATE INDEX IF NOT EXISTS idx_sync_data_updated_at ON sync_data(updated_at);
+        CREATE INDEX IF NOT EXISTS idx_items_sync ON items(user_id, updated_at);
+
+        CREATE TABLE IF NOT EXISTS prompt_overrides (
+          id SERIAL PRIMARY KEY,
+          type TEXT UNIQUE NOT NULL,
+          content TEXT NOT NULL,
+          updated_at TIMESTAMPTZ DEFAULT now()
+        );
       `);
       
       // Seed default admin if no users exist

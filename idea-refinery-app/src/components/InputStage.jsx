@@ -1,47 +1,58 @@
-import React from 'react';
-import { Sparkles, ArrowRight, Settings } from 'lucide-react';
+import React, { useState } from 'react';
+import { Send, Sparkles } from 'lucide-react';
+// import { pushItem } from '../services/db';
+// import { v4 as uuidv4 } from 'uuid';
 
-export default function InputStage({ idea, setIdea, onNext, loading }) {
+export default function InputStage({ idea, setIdea, onNext }) {
+  const [isFocused, setIsFocused] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!idea.trim()) return;
+    onNext();
+  };
+
   return (
-    <div className="space-y-8 animate-fade-in">
-      <div className="glass-panel rounded-2xl p-1 relative shadow-2xl transition-all hover:shadow-[0_0_30px_rgba(212,175,55,0.05)]">
-        <div className="bg-[#1A1A1A]/50 rounded-xl p-6 md:p-8">
-
-
-          <label className="flex items-center gap-2 text-sm text-[#D4AF37] mb-4 tracking-widest font-mono uppercase opacity-90">
-            <Sparkles className="w-4 h-4" />
-            Initialize Concept
-          </label>
-          
-          <textarea
-            value={idea}
-            onChange={(e) => setIdea(e.target.value)}
-            placeholder="Describe your vision here..."
-            className="w-full h-40 bg-[#0A0A0A] border border-[#333] rounded-lg px-6 py-5 text-white placeholder-gray-600 focus:outline-none input-glow transition-all resize-none font-sans text-lg leading-relaxed"
-          />
-          {/* Debug info */}
-          <div className="flex justify-end mt-3">
-             <span className="text-[10px] text-gray-600 font-mono tracking-wider">
-               {idea.length} / CHARS
-             </span>
+    <div className="min-h-[80vh] flex flex-col items-center justify-center px-4">
+      <div 
+        className={`w-full max-w-2xl transition-all duration-700 ${isFocused ? 'scale-105' : 'scale-100'}`}
+      >
+        <div className="relative group">
+          <div className={`absolute -inset-1 bg-gradient-to-r from-gold/20 via-gold/10 to-gold/20 rounded-2xl blur-lg transition-opacity duration-500 ${isFocused ? 'opacity-100' : 'opacity-0'}`}></div>
+          <div className="relative glass-panel rounded-2xl p-6 border border-gold/20">
+            <textarea
+              value={idea}
+              onChange={(e) => setIdea(e.target.value)}
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setIsFocused(false)}
+              placeholder="Refine your raw idea..."
+              className="w-full bg-transparent border-none focus:ring-0 text-xl md:text-2xl font-serif text-white/90 placeholder:text-zinc-600 resize-none min-h-[150px] leading-relaxed"
+            />
+            
+            <div className="flex justify-between items-center mt-4 pt-4 border-t border-white/5">
+              <span className="text-xs font-mono text-gold/50 uppercase tracking-widest">
+                {isFocused ? 'System Active' : 'Ready'}
+              </span>
+              <button 
+                onClick={handleSubmit}
+                disabled={!idea.trim()}
+                className="flex items-center gap-2 px-6 py-2 bg-gold/10 hover:bg-gold/20 text-gold rounded-full border border-gold/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-[0_0_15px_rgba(212,175,55,0.3)]"
+              >
+                <span className="font-mono text-sm uppercase tracking-wide">Refine</span>
+                <Send size={16} />
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-
-      <button
-        onClick={onNext}
-        disabled={!idea.trim() || loading}
-        className="w-full bg-[#D4AF37] hover:bg-[#F5D058] disabled:bg-[#1A1A1A] disabled:text-gray-600 disabled:border disabled:border-gray-800 text-[#0A0A0A] font-bold py-5 rounded-xl transition-all flex items-center justify-center gap-3 group font-mono tracking-wider shadow-[0_0_20px_rgba(212,175,55,0.2)] hover:shadow-[0_0_30px_rgba(212,175,55,0.4)] transform hover:-translate-y-1 active:translate-y-0"
-      >
-        {loading ? (
-          <>INITIALIZING PROTOCOL...</>
-        ) : (
-          <>
-            BEGIN REFINEMENT
-            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-          </>
+        
+        {!isFocused && (
+          <div className="mt-12 flex justify-center gap-8 animate-fade-in text-zinc-500">
+             <div className="flex flex-col items-center gap-2">
+               <Sparkles size={20} className="text-gold/40" />
+               <span className="text-xs font-mono uppercase">AI Enhanced</span>
+             </div>
+          </div>
         )}
-      </button>
+      </div>
     </div>
   );
 }

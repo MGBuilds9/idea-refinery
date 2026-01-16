@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://idea-refinery.vercel.app/sitemap.xml
+Sitemap: https://ideas.mkgbuilds.com/sitemap.xml

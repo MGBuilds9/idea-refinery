@@ -77,3 +77,76 @@ export const getSetting = async (key) => {
   const result = await db.settings.get(key);
   return result ? result.value : null;
 };
+
+// --- Sync Logic (Granular V4) ---
+
+db.version(4).stores({
+  conversations: '++id, timestamp, lastUpdated, idea, [timestamp+idea]',
+  settings: 'key',
+  systemPrompts: 'stage',
+  items: 'id, user_id, type, updated_at, deleted, [user_id+updated_at]'
+});
+
+export async function getAuthToken() {
+  return localStorage.getItem('authToken');
+}
+
+export async function setSyncToken(token) {
+  await db.settings.put({ key: 'sync_token', value: token });
+}
+
+export async function getSyncToken() {
+  const setting = await db.settings.get('sync_token');
+  return setting ? setting.value : null;
+}
+
+export async function pushItem(item, apiBaseUrl) {
+  const token = await getAuthToken();
+  if (!token) return;
+
+  // Save locally first
+  await db.items.put(item);
+
+  try {
+    const response = await fetch(`${apiBaseUrl}/api/sync/push`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ items: [item] })
+    });
+    
+    if (!response.ok) throw new Error('Push failed');
+    return await response.json();
+  } catch (e) {
+    console.error('Push error:', e);
+  }
+}
+
+export async function pullItems(apiBaseUrl) {
+  const token = await getAuthToken();
+  if (!token) return;
+
+  const lastSync = await getSyncToken();
+  const since = lastSync || new Date(0).toISOString();
+
+  try {
+    const response = await fetch(`${apiBaseUrl}/api/sync/pull?since=${since}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    if (!response.ok) throw new Error('Pull failed');
+    
+    const { items, timestamp } = await response.json();
+    
+    if (items && items.length > 0) {
+      await db.items.bulkPut(items);
+    }
+    
+    await setSyncToken(timestamp);
+    console.log(`Synced ${items.length} items from server.`);
+  } catch (e) {
+    console.error('Pull error:', e);
+  }
+}

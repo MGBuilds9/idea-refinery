@@ -7,18 +7,21 @@ import SettingsView from './components/SettingsView';
 import HistoryView from './components/HistoryView';
 import PinLockScreen from './components/PinLockScreen';
 import LoginScreen from './components/LoginScreen';
+import OnboardingView from './components/OnboardingView';
+import PromptStudio from './components/PromptStudio';
+import TokenUsage from './components/TokenUsage';
 
 // Lazy load heavy stages
 const BlueprintStage = React.lazy(() => import('./components/BlueprintStage'));
 const MockupStage = React.lazy(() => import('./components/MockupStage'));
 import { llm } from './lib/llm';
-import { saveConversation, getRecentConversations, cleanupOldConversations, deleteConversation, getSetting } from './services/db';
+import { saveConversation, getRecentConversations, cleanupOldConversations, deleteConversation, getSetting, pullItems } from './services/db';
 import { SyncService } from './services/SyncService';
-import { PROMPTS } from './lib/prompts';
+import { PromptService } from './services/PromptService';
 
 function App() {
   // Navigation State
-  const [activeView, setActiveView] = useState('input'); // 'input', 'history', 'settings'
+  const [activeView, setActiveView] = useState('input'); // 'input', 'history', 'settings', 'prompts'
   const [stage, setStage] = useState('input'); // Sub-stage for the 'input/project' flow
 
   const [loading, setLoading] = useState(false);
@@ -28,8 +31,9 @@ function App() {
   const [historyItems, setHistoryItems] = useState([]);
   const [currentDbId, setCurrentDbId] = useState(null);
   
-  // Security State
-  const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('authToken'));
+  // Security & Onboarding State
+  const [isOnboarding, setIsOnboarding] = useState(!localStorage.getItem('onboarding_complete'));
+  const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('auth_token'));
   const [isLocked, setIsLocked] = useState(true);
   const [checkingLock, setCheckingLock] = useState(true);
   // eslint-disable-next-line no-unused-vars
@@ -50,17 +54,26 @@ function App() {
   const [blueprintTab, setBlueprintTab] = useState('preview');
 
   // Currently selected provider
-  const [provider, setProvider] = useState(llm.getDefaultProvider());
+  // const [provider, setProvider] = useState(llm.getDefaultProvider()); // Unused state, fetching dynamically
+
 
   // DB Checks and PIN Lock
   useEffect(() => {
     const checkPinLock = async () => {
       try {
-        const pinHash = await getSetting('pinHash');
-        if (pinHash) {
-          setIsLocked(true);
+        // v1.2: Check local storage for PIN first
+        const localPin = localStorage.getItem('app_pin');
+        if (localPin) {
+           setIsLocked(true);
         } else {
-          setIsLocked(false);
+           // Fallback to legacy DB check
+           const pinHash = await getSetting('pinHash');
+           if (pinHash) {
+             setIsLocked(true);
+           } else {
+             // If no PIN at all, and not onboarding, we might be in an inconsistent state or dev mode
+             setIsLocked(false);
+           }
         }
       } catch (e) {
         console.error('Error checking PIN lock:', e);
@@ -69,21 +82,56 @@ function App() {
         setCheckingLock(false);
       }
     };
-    checkPinLock();
-    cleanupOldConversations().catch(console.error);
-    loadHistory(); // Load history initially
-  }, []);
+    
+    if (!isOnboarding) {
+        checkPinLock();
+        cleanupOldConversations().catch(console.error);
+        loadHistory(); 
+    } else {
+        setCheckingLock(false);
+    }
+  }, [isOnboarding]);
 
   const handleUnlock = async (pin) => {
+    // Verify PIN against localStorage
+    const storedPin = localStorage.getItem('app_pin');
+    
+    if (storedPin && pin !== storedPin) {
+        alert('Incorrect PIN');
+        return;
+    }
+    
     setActivePin(pin);
     // Load encrypted API keys and set active PIN on llm service
+    // For v1.2, we might be storing keys in localStorage plain text (transition period)
+    // But let's try to load properly if they exist.
     await llm.loadEncryptedKeys(pin);
     llm.setActivePin(pin);
+    
+    // Trigger Sync Pull
+    const serverUrl = localStorage.getItem('server_url') || import.meta.env.VITE_API_URL || 'http://localhost:3001';
+    pullItems(serverUrl).catch(console.error);
+
+    // Initialize Prompt Service (load overrides)
+    PromptService.init().catch(console.error);
+
     setIsLocked(false);
+  };
+  
+  const handleOnboardingComplete = () => {
+      setIsOnboarding(false);
+      // Onboarding saves 'onboarding_complete' and 'app_pin' to localStorage
+      // We should now be "authenticated" partially, or at least setup.
+      // Reload or just set state?
+      // Setting state triggers useEffect -> checkPinLock -> locks screen?
+      // We probably want to go straight to input, but "forcing" a login/unlock to verify PIN is good security.
+      // But for better UX, let's just unlock immediately.
+      setIsLocked(false);
+      loadHistory();
   };
 
   const handleLogin = (token) => {
-    localStorage.setItem('authToken', token);
+    localStorage.setItem('auth_token', token);
     setIsAuthenticated(true);
   };
 
@@ -156,10 +204,11 @@ function App() {
   };
 
   // Helper to ensure API key exists
-  const checkApiKey = (p = provider) => {
-    if (!llm.getApiKey(p)) {
+  const checkApiKey = (p) => {
+    const provider = p || llm.getDefaultProvider();
+    if (!llm.getApiKey(provider)) {
       setActiveView('settings');
-      alert(`Please enter your ${p} API key in Settings to continue.`);
+      alert(`Please enter your ${provider} API key in Settings to continue.`);
       return false;
     }
     return true;
@@ -169,10 +218,12 @@ function App() {
     if (!checkApiKey()) return;
     setLoading(true);
     setLoadingMessage('Generating questions...');
+    setLoadingMessage('Generating questions...');
     try {
-      const { system, prompt } = PROMPTS.questions(idea);
+      const { system, prompt } = PromptService.get('questions', { idea });
+      const currentProvider = llm.getDefaultProvider();
       const model = llm.getModelForStage('questions');
-      const responseText = await llm.generate(provider, {
+      const responseText = await llm.generate(currentProvider, {
         system,
         prompt,
         model
@@ -214,9 +265,10 @@ function App() {
     try {
       // First pass
       setLoadingMessage('Generating blueprint...');
-      const { system, prompt } = PROMPTS.blueprint(idea, questions, answers);
+      const { system, prompt } = PromptService.get('blueprint', { idea, questions, answers });
+      const currentProvider = llm.getDefaultProvider();
       const model = llm.getModelForStage('blueprint');
-      let responseText = await llm.generate(provider, {
+      let responseText = await llm.generate(currentProvider, {
         system,
         prompt,
         model,
@@ -226,7 +278,7 @@ function App() {
       // Second pass if enabled
       if (settings.enableSecondPass) {
         setLoadingMessage('Refining with second AI...');
-        const { system: sp2System, prompt: sp2Prompt } = PROMPTS.secondPass(responseText);
+        const { system: sp2System, prompt: sp2Prompt } = PromptService.get('secondPass', { originalBlueprint: responseText });
         responseText = await llm.generate(settings.secondPassProvider, {
           system: sp2System,
           prompt: sp2Prompt,
@@ -272,15 +324,17 @@ function App() {
     setLoadingMessage('Refining blueprint...');
 
     try {
-      const { system } = PROMPTS.refine();
+      const { system } = PromptService.get('refine', { refinementInput });
       const prompt = `CURRENT BLUEPRINT:\n${blueprint}\n\nUSER REQUEST: ${refinementInput}`;
       const model = llm.getModelForStage('refinement');
 
-      const responseText = await llm.generate(provider, {
+      const currentProvider = llm.getDefaultProvider();
+      const responseText = await llm.generate(currentProvider, {
           system, 
           prompt,
           model,
-          maxTokens: 8000
+          maxTokens: 8000,
+          history: chatHistory // Pass history for optimization
       });
       
       const sections = responseText.split('## Master Takeoff Prompt');
@@ -318,10 +372,12 @@ function App() {
     setLoading(true);
     setLoadingMessage('Generating mockup...');
     setStage('mockup');
+    setStage('mockup');
     try {
-      const { system, prompt } = PROMPTS.mockup(blueprint);
+      const { system, prompt } = PromptService.get('mockup', { blueprint });
+      const currentProvider = llm.getDefaultProvider();
       const model = llm.getModelForStage('mockup');
-      let html = await llm.generate(provider, { system, prompt, model, maxTokens: 8000 });
+      let html = await llm.generate(currentProvider, { system, prompt, model, maxTokens: 8000 });
       
       html = html.replace(/```html\n?/g, '').replace(/```\n?/g, '').trim();
       
@@ -393,51 +449,73 @@ function App() {
     <>
       {checkingLock && (
         <div className="min-h-screen bg-[#1A1A1A] flex items-center justify-center">
-          <Sparkles className="w-8 h-8 text-[#D4AF37] animate-pulse" />
+          <div className="flex flex-col items-center">
+             <Sparkles className="w-8 h-8 text-[#D4AF37] animate-pulse mb-4" />
+             <p className="text-[#D4AF37] font-mono text-xs">INITIALIZING REFINERY...</p>
+          </div>
         </div>
       )}
 
-      {!checkingLock && !isAuthenticated && (
-        <LoginScreen onLogin={handleLogin} />
+      {!checkingLock && isOnboarding && (
+        <OnboardingView onComplete={handleOnboardingComplete} />
       )}
 
-      {!checkingLock && isAuthenticated && isLocked && (
-        <PinLockScreen onUnlock={handleUnlock} />
-      )}
+      {/* Main App Flow (Only if not onboarding) */}
+      {!checkingLock && !isOnboarding && (
+       <>
+         {!isAuthenticated && (
+           <LoginScreen onLogin={handleLogin} />
+         )}
 
-      {!checkingLock && isAuthenticated && !isLocked && (
-        <div className="flex min-h-screen bg-[#1A1A1A] text-white font-sans selection:bg-[#D4AF37] selection:text-black">
-            
-            {/* Sidebar */}
-            <Sidebar activeView={activeView} onViewChange={handleViewChange} />
+         {isAuthenticated && isLocked && (
+           <PinLockScreen onSuccess={handleUnlock} />
+         )}
 
-            {/* Main Content */}
-            <main className="flex-1 ml-64 p-8 overflow-y-auto">
-                
-                {/* Header (Context sensitive) */}
-                <div className="mb-12 flex justify-end">
-                     {activeView === 'input' && isSecondPassEnabled && (
-                        <div className="inline-flex items-center gap-1 px-3 py-1 bg-purple-900/30 border border-purple-500/30 rounded-full animate-fade-in">
-                        <Zap className="w-3 h-3 text-purple-400" />
-                        <span className="text-xs text-purple-300 font-mono">Second Pass Enabled</span>
-                        </div>
-                    )}
-                </div>
+         {isAuthenticated && !isLocked && (
+           <div className="flex min-h-screen bg-[#1A1A1A] text-white font-sans selection:bg-[#D4AF37] selection:text-black">
+               
+               {/* Sidebar */}
+               <Sidebar activeView={activeView} onViewChange={handleViewChange} />
 
-                {/* Views */}
-                {activeView === 'settings' && (
-                    <SettingsView />
-                )}
+               {/* Main Content */}
+               <main className="flex-1 ml-64 p-8 overflow-y-auto">
+                   
+                   {/* Header (Context sensitive) */}
+                   <div className="mb-12 flex justify-between items-center">
+                     <div className="flex-1"></div> {/* Spacer */}
+                     <div className="flex items-center gap-4">
+                        {/* Token Usage Indicator */}
+                        {(activeView === 'input' || activeView === 'prompts') && (
+                           <TokenUsage contextItems={conversation} />
+                        )}
 
-                {activeView === 'history' && (
-                    <HistoryView 
-                        historyItems={historyItems}
-                        onLoad={handleLoadSession}
-                        onDelete={handleDeleteSession}
-                    />
-                )}
+                        {activeView === 'input' && isSecondPassEnabled && (
+                           <div className="inline-flex items-center gap-1 px-3 py-1 bg-purple-900/30 border border-purple-500/30 rounded-full animate-fade-in">
+                           <Zap className="w-3 h-3 text-purple-400" />
+                           <span className="text-xs text-purple-300 font-mono">Second Pass Enabled</span>
+                           </div>
+                       )}
+                     </div>
+                   </div>
 
-                {activeView === 'input' && (
+                   {/* Views */}
+                   {activeView === 'settings' && (
+                       <SettingsView />
+                   )}
+                   
+                   {activeView === 'prompts' && (
+                       <PromptStudio />
+                   )}
+
+                   {activeView === 'history' && (
+                       <HistoryView 
+                           historyItems={historyItems}
+                           onLoad={handleLoadSession}
+                           onDelete={handleDeleteSession}
+                       />
+                   )}
+
+      {activeView === 'input' && (
                     <div className="max-w-4xl mx-auto">
                         
                         {/* Logo on new project screen only */}
@@ -455,8 +533,7 @@ function App() {
                             <InputStage 
                                 idea={idea} 
                                 setIdea={setIdea} 
-                                onNext={handleGenerateQuestions} 
-                                loading={loading}
+                                onNext={handleGenerateQuestions}
                             />
                         )}
 
@@ -522,6 +599,8 @@ function App() {
             </main>
         </div>
       )}
+      </>
+    )}
     </>
   );
 }

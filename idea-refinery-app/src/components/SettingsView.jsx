@@ -516,6 +516,59 @@ export default function SettingsView() {
                   )}
                 </>
               )}
+
+              <div className="h-px bg-[#333] my-8" />
+              
+              <div className="p-6 bg-[#0A0A0A] rounded-lg border border-[#333]">
+                <div className="flex items-center gap-3 mb-3">
+                  <Server className="w-5 h-5 text-[#D4AF37]" />
+                  <p className="text-white font-medium">Email Configuration (Resend)</p>
+                </div>
+                <p className="text-sm text-gray-500 font-mono leading-relaxed mb-4">
+                  Configure Resend to enable sending blueprints via email.
+                </p>
+                
+                <div className="space-y-4">
+                     <div>
+                        <label className="block text-xs uppercase text-[#D4AF37] mb-2 font-mono opacity-80">
+                        Resend API Key
+                        </label>
+                        <input
+                        type="password"
+                        defaultValue={localStorage.getItem('resend_api_key') || ''}
+                        onChange={(e) => {
+                            localStorage.setItem('resend_api_key', e.target.value);
+                        }}
+                        placeholder="re_..."
+                        className="w-full bg-[#0A0A0A]/60 border border-[#D4AF37]/20 rounded-lg px-4 py-4 text-white focus:border-[#D4AF37]/60 focus:outline-none font-mono text-sm tracking-widest transition-all duration-300 input-glow"
+                        />
+                     </div>
+                     <button
+                        onClick={async () => {
+                             try {
+                                 setSaveStatus('Sending...');
+                                 const key = localStorage.getItem('resend_api_key');
+                                 if (!key) throw new Error('No API Key');
+                                 await import('../services/email').then(m => m.EmailService.send(
+                                     'test@example.com', // To
+                                     'Test Email from Idea Refinery',
+                                     '<h1>It works!</h1><p>Your email configuration is correct.</p>',
+                                     key
+                                 ));
+                                 setSaveStatus('Email Sent!');
+                                 setTimeout(() => setSaveStatus(''), 2000);
+                             } catch(e) {
+                                 alert(e.message);
+                                 setSaveStatus('Failed');
+                             }
+                        }}
+                        className="text-xs bg-[#333] hover:bg-[#444] text-white px-3 py-2 rounded transition-colors"
+                     >
+                        Send Test Email (to owner)
+                     </button>
+                </div>
+              </div>
+
             </div>
           )}
 
@@ -635,6 +688,8 @@ export default function SettingsView() {
               </button>
             </div>
           )}
+
+
 
             {/* Save Button (Floating) */}
             <div className="absolute top-8 right-8">

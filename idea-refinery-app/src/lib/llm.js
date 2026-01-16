@@ -148,18 +148,51 @@ class LLMService {
     return this.apiKeys[provider];
   }
 
-  async generate(provider, { system, prompt, maxTokens = 4000, model }) {
+  // Context Optimization: Sliding Window + Summary
+  // Keeps system prompt, recent N messages, and summarizes older ones (mock summary for now)
+  optimizeContext(messages, maxCount = 8) {
+     if (!messages || messages.length <= maxCount) return messages;
+     
+     // Always keep system prompt if present (usually passed separately, but if in array...)
+     // Our usage passes system prompt separately, so 'messages' here are user/assistant turns.
+     
+     const optimized = [];
+     
+     // 1. Keep the first user message (Context/Idea)
+     if (messages.length > 0) optimized.push(messages[0]);
+     
+     // 2. Insert a "summary" placeholder for skipped messages
+     // In a real implementation, we would call a cheap model to summarize messages[1] to messages[length-N]
+     const skippedCount = messages.length - maxCount;
+     if (skippedCount > 0) {
+         optimized.push({
+             role: 'system_note', // Internal marker, handled by provider adapters
+             content: `[Context Summary: ${skippedCount} previous messages compressed]`
+         });
+     }
+     
+     // 3. Keep last N-1 messages
+     const tail = messages.slice(- (maxCount - 1));
+     tail.forEach(m => optimized.push(m));
+     
+     return optimized;
+  }
+
+  async generate(provider, { system, prompt, maxTokens = 4000, model, history = [] }) {
     if (!this.apiKeys[provider]) {
       throw new Error(`Please provide an API key for ${provider}`);
     }
+    
+    // Optimize history if provided
+    const optimizedHistory = this.optimizeContext(history);
 
     switch (provider) {
       case 'anthropic':
-        return this.callAnthropic({ system, prompt, maxTokens, model });
+        return this.callAnthropic({ system, prompt, maxTokens, model, history: optimizedHistory });
       case 'openai':
-        return this.callOpenAI({ system, prompt, maxTokens, model });
+        return this.callOpenAI({ system, prompt, maxTokens, model, history: optimizedHistory });
       case 'gemini':
-        return this.callGemini({ system, prompt, maxTokens, model });
+        return this.callGemini({ system, prompt, maxTokens, model, history: optimizedHistory });
       default:
         throw new Error(`Unknown provider: ${provider}`);
     }
@@ -191,8 +224,36 @@ class LLMService {
     return refinedResult;
   }
 
+  // Build message array helper
+  buildMessages(history, prompt) {
+      const messages = [];
+      
+      // Add history
+      if (history && history.length > 0) {
+          history.forEach(msg => {
+              // Handle our internal compression marker
+              if (msg.role === 'system_note') {
+                  // In OpenAI/Anthropic, we can squish this into a user or system message
+                  messages.push({ role: 'system', content: msg.content }); 
+              } else {
+                  messages.push(msg);
+              }
+          });
+      }
+      
+      // Add current prompt
+      if (prompt) {
+          messages.push({ role: 'user', content: prompt });
+      }
+      
+      return messages;
+  }
+
   // Anthropic Implementation - via proxy to avoid CORS
-  async callAnthropic({ system, prompt, maxTokens, model }) {
+  async callAnthropic({ system, prompt, maxTokens, model, history }) {
+     // Prepare messages
+    const messages = this.buildMessages(history, prompt);
+
     const response = await fetch(`${PROXY_URL}/anthropic`, {
       method: "POST",
       headers: {
@@ -203,7 +264,7 @@ class LLMService {
         model: model || "claude-3-5-sonnet-20241022",
         max_tokens: maxTokens,
         system: system,
-        messages: [{ role: "user", content: prompt }]
+        messages: messages
       })
     });
 
@@ -217,7 +278,14 @@ class LLMService {
   }
 
   // OpenAI Implementation - via proxy to avoid CORS
-  async callOpenAI({ system, prompt, maxTokens, model }) {
+  async callOpenAI({ system, prompt, maxTokens, model, history }) {
+    const messages = this.buildMessages(history, prompt);
+    
+    // Add system prompt to start
+    if (system) {
+        messages.unshift({ role: "system", content: system || "You are a helpful assistant." });
+    }
+
     const response = await fetch(`${PROXY_URL}/openai`, {
       method: "POST",
       headers: {
@@ -227,10 +295,7 @@ class LLMService {
       body: JSON.stringify({
         model: model || "gpt-4o",
         max_tokens: maxTokens,
-        messages: [
-          { role: "system", content: system || "You are a helpful assistant." },
-          { role: "user", content: prompt }
-        ]
+        messages: messages
       })
     });
 
@@ -244,13 +309,21 @@ class LLMService {
   }
 
   // Gemini Implementation - via proxy to avoid CORS
-  async callGemini({ system, prompt, maxTokens, model }) {
+  async callGemini({ system, prompt, maxTokens, model, history }) {
+    const msgs = this.buildMessages(history, prompt);
+    
+    // Convert to Gemini format
+    const contents = msgs.map(m => {
+        let role = 'user';
+        if (m.role === 'assistant') role = 'model';
+        if (m.role === 'system') return null; // System handled separately
+        return { role, parts: [{ text: m.content }] };
+    }).filter(Boolean);
+
     const body = {
       model: model || "gemini-1.5-pro",
       apiKey: this.apiKeys.gemini,
-      contents: [
-        { role: "user", parts: [{ text: prompt }] }
-      ],
+      contents: contents,
       generationConfig: {
         maxOutputTokens: maxTokens
       }

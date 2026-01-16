@@ -1,5 +1,5 @@
 import React from 'react';
-import { History, Trash2, ArrowRight, Calendar } from 'lucide-react';
+import { History, Trash2, ArrowRight, Calendar, Mail } from 'lucide-react';
 
 export default function HistoryView({ historyItems, onLoad, onDelete }) {
   
@@ -54,6 +54,33 @@ export default function HistoryView({ historyItems, onLoad, onDelete }) {
               </div>
 
               <div className="flex items-center gap-2 self-center opacity-0 group-hover:opacity-100 transition-opacity">
+                {item.blueprint && (
+                   <button
+                        onClick={async (e) => {
+                            e.stopPropagation();
+                            if (!confirm('Email this blueprint to yourself?')) return;
+                            try {
+                                const { EmailService } = await import('../services/email');
+                                const html = `
+                                    <h1>Project: ${item.idea}</h1>
+                                    <p>Date: ${new Date().toLocaleString()}</p>
+                                    <hr/>
+                                    <pre style="white-space: pre-wrap;">${item.blueprint}</pre>
+                                `;
+                                await EmailService.send('test@example.com', `Blueprint: ${item.idea}`, html);
+                                alert('Email Sent!');
+                            } catch (err) {
+                                console.error(err);
+                                alert('Failed to send email. Check Settings.');
+                            }
+                        }}
+                        className="p-3 text-gray-500 hover:text-[#D4AF37] hover:bg-[#D4AF37]/10 rounded-lg transition-colors"
+                        title="Email Blueprint"
+                    >
+                        <Mail className="w-5 h-5" />
+                    </button>
+                )}
+
                 <button
                   onClick={(e) => {
                     e.stopPropagation();

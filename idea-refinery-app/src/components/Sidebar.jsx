@@ -1,10 +1,10 @@
-import React from 'react';
-import { PlusCircle, History, Settings, LogOut } from 'lucide-react';
+import { PlusCircle, History, Settings, LogOut, Terminal } from 'lucide-react';
 
 export default function Sidebar({ activeView, onViewChange }) {
   const menuItems = [
     { id: 'input', label: 'New Project', icon: PlusCircle },
     { id: 'history', label: 'History', icon: History },
+    { id: 'prompts', label: 'Prompts', icon: Terminal },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
