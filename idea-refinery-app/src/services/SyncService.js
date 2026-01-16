@@ -12,11 +12,17 @@ export const SyncService = {
     }
 
     try {
+      const token = localStorage.getItem('authToken');
+      const headers = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const response = await fetch(`${baseUrl}/api/sync`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({
           deviceId,
           data
@@ -41,7 +47,15 @@ export const SyncService = {
     const baseUrl = serverUrl.replace(/\/$/, '');
     
     try {
-      const response = await fetch(`${baseUrl}/api/sync`);
+      const token = localStorage.getItem('authToken');
+      const headers = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      const response = await fetch(`${baseUrl}/api/sync`, {
+        headers
+      });
       
       if (!response.ok) {
         throw new Error('Sync pull failed');

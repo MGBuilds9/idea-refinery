@@ -1,0 +1,654 @@
+import React, { useState } from 'react';
+import { Save, Eye, EyeOff, Zap, Bot, Settings2, Lock, Server, LogIn, LogOut } from 'lucide-react';
+import { llm, AVAILABLE_MODELS } from '../lib/llm';
+import { saveSetting } from '../services/db';
+import { hashPin } from '../services/crypto';
+import { AuthService } from '../services/AuthService';
+
+// Get initial settings outside component to avoid recalculation
+const getInitialSettings = () => {
+  const settings = llm.getSettings();
+  return {
+    keys: {
+      anthropic: llm.getApiKey('anthropic') || '',
+      openai: llm.getApiKey('openai') || '',
+      gemini: llm.getApiKey('gemini') || ''
+    },
+    provider: llm.getDefaultProvider(),
+    enableSecondPass: settings.enableSecondPass,
+    secondPassProvider: settings.secondPassProvider,
+    secondPassModel: settings.secondPassModel,
+    stageModels: settings.stageModels
+  };
+};
+
+export default function SettingsView() {
+  const [activeTab, setActiveTab] = useState('keys'); // keys, models, secondpass
+  
+  // Initialize all state from stored settings
+  const initialSettings = getInitialSettings();
+  
+  // API Keys state
+  const [keys, setKeys] = useState(initialSettings.keys);
+  const [showKeys, setShowKeys] = useState({
+    anthropic: false,
+    openai: false,
+    gemini: false
+  });
+  const [provider, setProvider] = useState(initialSettings.provider);
+
+  // Second Pass state
+  const [enableSecondPass, setEnableSecondPass] = useState(initialSettings.enableSecondPass);
+  const [secondPassProvider, setSecondPassProvider] = useState(initialSettings.secondPassProvider);
+  const [secondPassModel, setSecondPassModel] = useState(initialSettings.secondPassModel);
+
+  // Stage models state
+  const [stageModels, setStageModels] = useState(initialSettings.stageModels);
+
+  // Security state
+  const [newPin, setNewPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
+  const [pinError, setPinError] = useState('');
+  const [pinSuccess, setPinSuccess] = useState('');
+  
+  // Server Auth state
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
+  
+  // Feedback state
+  const [saveStatus, setSaveStatus] = useState('');
+
+  // Server/Sync state
+  const [serverUrl, setServerUrl] = useState(AuthService.getServerUrl());
+  const [isAuthenticated, setIsAuthenticated] = useState(AuthService.isAuthenticated());
+  const [username, setUsername] = useState(AuthService.getUsername() || '');
+  const [serverUsername, setServerUsername] = useState('');
+  const [serverPassword, setServerPassword] = useState('');
+  const [serverError, setServerError] = useState('');
+  const [serverSuccess, setServerSuccess] = useState('');
+
+  const handleSave = async () => {
+    setSaveStatus('Saving...');
+    try {
+        await llm.setApiKeys({
+          anthropic: keys.anthropic,
+          openai: keys.openai,
+          gemini: keys.gemini
+        });
+    
+        llm.setDefaultProvider(provider);
+        
+        llm.updateSettings({
+          enableSecondPass,
+          secondPassProvider,
+          secondPassModel,
+          stageModels
+        });
+    
+        localStorage.setItem('serverUrl', serverUrl);
+        
+        setSaveStatus('Settings Saved!');
+        setTimeout(() => setSaveStatus(''), 2000);
+    } catch (e) {
+        setSaveStatus('Error saving!');
+        console.error(e);
+    }
+  };
+
+  const toggleShow = (p) => {
+    setShowKeys(prev => ({ ...prev, [p]: !prev[p] }));
+  };
+
+  const getModelsForProvider = (p) => {
+    return AVAILABLE_MODELS[p] || [];
+  };
+
+  const tabs = [
+    { id: 'keys', label: 'API Keys', icon: Settings2 },
+    { id: 'models', label: 'Models', icon: Bot },
+    { id: 'secondpass', label: 'Second Pass', icon: Zap },
+    { id: 'server', label: 'Server', icon: Settings2 },
+    { id: 'security', label: 'Security', icon: Lock }
+  ];
+
+  const handleSavePin = async () => {
+    setPinError('');
+    setPinSuccess('');
+
+    if (newPin.length < 4) {
+      setPinError('PIN must be at least 4 digits');
+      return;
+    }
+    if (newPin !== confirmPin) {
+      setPinError('PINs do not match');
+      return;
+    }
+
+    try {
+      const hash = await hashPin(newPin);
+      await saveSetting('pinHash', hash);
+      setPinSuccess('PIN saved successfully! Restart app to enable.');
+      setNewPin('');
+      setConfirmPin('');
+    } catch (e) {
+      console.error(e);
+      setPinError('Failed to save PIN');
+    }
+  };
+
+  const handleRemovePin = async () => {
+    try {
+      await saveSetting('pinHash', null);
+      setPinSuccess('PIN removed. App will no longer be locked.');
+    } catch (e) {
+      console.error(e);
+      setPinError('Failed to remove PIN');
+    }
+  };
+
+  const handleChangePassword = async () => {
+    setPasswordError('');
+    setPasswordSuccess('');
+
+    if (newPassword.length < 6) {
+      setPasswordError('Password must be at least 6 characters');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Passwords do not match');
+      return;
+    }
+
+    try {
+      await AuthService.changePassword(serverUrl, newPassword);
+      setPasswordSuccess('Password changed successfully');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (e) {
+      console.error(e);
+      setPasswordError(e.message || 'Error changing password');
+    }
+  };
+
+  const handleServerLogin = async () => {
+    setServerError('');
+    setServerSuccess('');
+
+    if (!serverUrl) {
+      setServerError('Please enter server URL');
+      return;
+    }
+    if (!serverUsername || !serverPassword) {
+      setServerError('Please enter username and password');
+      return;
+    }
+
+    try {
+      await AuthService.login(serverUrl, serverUsername, serverPassword);
+      setIsAuthenticated(true);
+      setUsername(serverUsername);
+      setServerSuccess('Logged in successfully!');
+      setServerPassword('');
+    } catch (e) {
+      console.error(e);
+      setServerError(e.message || 'Login failed');
+    }
+  };
+
+  const handleServerLogout = () => {
+    AuthService.logout();
+    setIsAuthenticated(false);
+    setUsername('');
+    setServerSuccess('Logged out successfully');
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto animate-fade-in p-6">
+      <div className="mb-8">
+        <h2 className="text-3xl font-serif text-[#D4AF37] mb-2">System Configuration</h2>
+        <p className="text-gray-400 font-mono text-sm">Manage API keys, models, and security protocols.</p>
+      </div>
+
+      <div className="flex gap-8">
+        {/* Sidebar Nav for Settings */}
+        <div className="w-56 space-y-2">
+            {tabs.map(tab => (
+                <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all font-mono text-sm text-left ${
+                    activeTab === tab.id 
+                    ? 'bg-[#D4AF37]/10 text-[#D4AF37] border border-[#D4AF37]/20' 
+                    : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
+                }`}
+                >
+                <tab.icon className="w-4 h-4" />
+                {tab.label}
+                </button>
+            ))}
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 glass-panel rounded-xl p-8 min-h-[500px] relative transition-all duration-300">
+            
+            {/* API Keys Tab */}
+            {activeTab === 'keys' && (
+                <div className="space-y-6 animate-fade-in">
+                <div>
+                    <label className="block text-xs uppercase text-[#D4AF37] mb-2 font-mono opacity-80">
+                    Default Provider
+                    </label>
+                    <div className="relative group">
+                        <select 
+                        value={provider}
+                        onChange={(e) => setProvider(e.target.value)}
+                        className="w-full bg-[#0A0A0A]/60 border border-[#D4AF37]/20 rounded-lg px-4 py-4 text-white focus:border-[#D4AF37]/60 focus:outline-none font-mono text-sm transition-all duration-300 input-glow appearance-none"
+                        >
+                        <option value="anthropic">Anthropic (Claude)</option>
+                        <option value="openai">OpenAI (GPT-4o)</option>
+                        <option value="gemini">Google Gemini</option>
+                        </select>
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[#D4AF37]/50">
+                            ▼
+                        </div>
+                    </div>
+                </div>
+
+                <div className="h-px bg-gradient-to-r from-transparent via-[#D4AF37]/20 to-transparent my-8" />
+
+                {['anthropic', 'openai', 'gemini'].map(p => (
+                    <div key={p}>
+                    <label className="block text-xs uppercase text-[#D4AF37] mb-2 font-mono opacity-80">
+                        {p} API Key
+                    </label>
+                    <div className="relative group">
+                        <input
+                        type={showKeys[p] ? "text" : "password"}
+                        value={keys[p]}
+                        onChange={(e) => setKeys({ ...keys, [p]: e.target.value })}
+                        placeholder={`sk-...`}
+                        className="w-full bg-[#0A0A0A]/60 border border-[#D4AF37]/20 rounded-lg px-4 py-4 pr-12 text-white focus:border-[#D4AF37]/60 focus:outline-none font-mono text-sm transition-all duration-300 input-glow"
+                        />
+                        <button
+                        onClick={() => toggleShow(p)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-gray-500 hover:text-[#D4AF37] transition-colors rounded-full hover:bg-[#D4AF37]/10"
+                        >
+                        {showKeys[p] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                    </div>
+                    </div>
+                ))}
+                </div>
+            )}
+
+            {/* Models Tab */}
+            {activeTab === 'models' && (
+                <div className="space-y-6 animate-fade-in">
+                <div className="bg-[#D4AF37]/5 border border-[#D4AF37]/20 p-4 rounded-xl mb-6">
+                    <p className="text-xs text-[#D4AF37] font-mono leading-relaxed">
+                    💎 Advanced: Override default models for specific stages in the pipeline.
+                    </p>
+                </div>
+                
+                {[
+                    { key: 'questions', label: 'Questions Generation' },
+                    { key: 'blueprint', label: 'Blueprint Generation' },
+                    { key: 'refinement', label: 'Blueprint Refinement' },
+                    { key: 'mockup', label: 'Mockup Generation' }
+                ].map(stage => (
+                    <div key={stage.key}>
+                    <label className="block text-xs uppercase text-[#D4AF37] mb-2 font-mono opacity-80">
+                        {stage.label}
+                    </label>
+                    <select
+                        value={stageModels[stage.key] || ''}
+                        onChange={(e) => setStageModels({ 
+                        ...stageModels, 
+                        [stage.key]: e.target.value || null 
+                        })}
+                        className="w-full bg-[#0A0A0A]/60 border border-[#D4AF37]/20 rounded-lg px-4 py-4 text-white focus:border-[#D4AF37]/60 focus:outline-none font-mono text-sm transition-all duration-300 input-glow"
+                    >
+                        <option value="">Default (use provider default)</option>
+                        <optgroup label="Anthropic">
+                        {AVAILABLE_MODELS.anthropic.map(m => (
+                            <option key={m.id} value={m.id}>{m.name}</option>
+                        ))}
+                        </optgroup>
+                        <optgroup label="OpenAI">
+                        {AVAILABLE_MODELS.openai.map(m => (
+                            <option key={m.id} value={m.id}>{m.name}</option>
+                        ))}
+                        </optgroup>
+                        <optgroup label="Gemini">
+                        {AVAILABLE_MODELS.gemini.map(m => (
+                            <option key={m.id} value={m.id}>{m.name}</option>
+                        ))}
+                        </optgroup>
+                    </select>
+                    </div>
+                ))}
+                </div>
+            )}
+
+          {/* Second Pass Tab */}
+          {activeTab === 'secondpass' && (
+            <div className="space-y-6 animate-fade-in">
+              <div className="flex items-center justify-between p-6 bg-[#0A0A0A]/60 rounded-xl border border-[#D4AF37]/20">
+                <div>
+                  <p className="text-white font-medium mb-1">Enable Second Pass Refinement</p>
+                  <p className="text-xs text-gray-500 font-mono">
+                    Use a second AI to critique and improve the blueprint automatically
+                  </p>
+                </div>
+                <button
+                  onClick={() => setEnableSecondPass(!enableSecondPass)}
+                  className={`relative w-14 h-7 rounded-full transition-colors ${
+                    enableSecondPass ? 'bg-[#D4AF37]' : 'bg-[#333]'
+                  }`}
+                >
+                  <span className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-transform ${
+                    enableSecondPass ? 'translate-x-8' : 'translate-x-1'
+                  }`} />
+                </button>
+              </div>
+
+              {enableSecondPass && (
+                <div className="animate-fade-in space-y-6 border-t border-[#333] pt-6">
+                  <div>
+                    <label className="block text-xs uppercase text-[#D4AF37] mb-2 font-mono opacity-80">
+                      Second Pass Provider
+                    </label>
+                    <select
+                      value={secondPassProvider}
+                      onChange={(e) => {
+                        setSecondPassProvider(e.target.value);
+                        const models = AVAILABLE_MODELS[e.target.value];
+                        if (models && models.length > 0) {
+                          setSecondPassModel(models[0].id);
+                        }
+                      }}
+                      className="w-full bg-[#0A0A0A]/60 border border-[#D4AF37]/20 rounded-lg px-4 py-4 text-white focus:border-[#D4AF37]/60 focus:outline-none font-mono text-sm transition-all duration-300 input-glow"
+                    >
+                      <option value="anthropic">Anthropic (Claude)</option>
+                      <option value="openai">OpenAI</option>
+                      <option value="gemini">Google Gemini</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs uppercase text-[#D4AF37] mb-2 font-mono opacity-80">
+                      Second Pass Model
+                    </label>
+                    <select
+                      value={secondPassModel}
+                      onChange={(e) => setSecondPassModel(e.target.value)}
+                      className="w-full bg-[#0A0A0A]/60 border border-[#D4AF37]/20 rounded-lg px-4 py-4 text-white focus:border-[#D4AF37]/60 focus:outline-none font-mono text-sm transition-all duration-300 input-glow"
+                    >
+                      {getModelsForProvider(secondPassProvider).map(m => (
+                        <option key={m.id} value={m.id}>{m.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="p-4 bg-purple-900/10 border border-purple-500/20 rounded-lg flex gap-3">
+                    <Zap className="w-5 h-5 text-purple-400 shrink-0" />
+                    <p className="text-xs text-purple-300 font-mono leading-relaxed">
+                      Tip: Using a different provider for the second pass often yields better results. For example, use Claude 3.5 Sonnet for the first pass and GPT-4o for the critique.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Server Tab */}
+          {activeTab === 'server' && (
+            <div className="space-y-6 animate-fade-in">
+              <div className="p-6 bg-[#0A0A0A]/60 rounded-xl border border-[#D4AF37]/20">
+                <div className="flex items-center gap-3 mb-3">
+                  <Settings2 className="w-5 h-5 text-[#D4AF37]" />
+                  <p className="text-white font-medium">Self-Hosted Server</p>
+                </div>
+                <p className="text-sm text-gray-500 font-mono leading-relaxed">
+                  Connect to your self-hosted server (ideas.mkgbuilds.com) for syncing data across devices.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs uppercase text-[#D4AF37] mb-2 font-mono opacity-80">
+                  Server URL
+                </label>
+                <input
+                  type="text"
+                  value={serverUrl}
+                  onChange={(e) => setServerUrl(e.target.value)}
+                  placeholder="https://ideas.mkgbuilds.com"
+                  className="w-full bg-[#0A0A0A]/60 border border-[#D4AF37]/20 rounded-lg px-4 py-4 text-white focus:border-[#D4AF37]/60 focus:outline-none font-mono text-sm transition-all duration-300 input-glow"
+                />
+              </div>
+
+              {!isAuthenticated ? (
+                <>
+                  <div className="h-px bg-[#333] my-6" />
+                  
+                  <div className="p-6 bg-[#0A0A0A]/60 rounded-xl border border-[#D4AF37]/20">
+                    <div className="flex items-center gap-3 mb-4">
+                      <LogIn className="w-5 h-5 text-[#D4AF37]" />
+                      <p className="text-white font-medium">Server Login</p>
+                    </div>
+                    <p className="text-sm text-gray-500 font-mono mb-6">
+                      Default credentials: username <code className="text-[#D4AF37]">admin</code>, password <code className="text-[#D4AF37]">admin123</code>
+                    </p>
+
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-xs uppercase text-[#D4AF37] mb-2 font-mono opacity-80">
+                          Username
+                        </label>
+                        <input
+                          type="text"
+                          value={serverUsername}
+                          onChange={(e) => setServerUsername(e.target.value)}
+                          placeholder="admin"
+                          className="w-full bg-[#0A0A0A]/60 border border-[#D4AF37]/20 rounded-lg px-4 py-3 text-white focus:border-[#D4AF37]/60 focus:outline-none font-mono text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs uppercase text-[#D4AF37] mb-2 font-mono opacity-80">
+                          Password
+                        </label>
+                        <input
+                          type="password"
+                          value={serverPassword}
+                          onChange={(e) => setServerPassword(e.target.value)}
+                          placeholder="••••••••"
+                          className="w-full bg-[#0A0A0A]/60 border border-[#D4AF37]/20 rounded-lg px-4 py-3 text-white focus:border-[#D4AF37]/60 focus:outline-none font-mono text-sm"
+                          onKeyPress={(e) => e.key === 'Enter' && handleServerLogin()}
+                        />
+                      </div>
+                    </div>
+
+                    {serverError && (
+                      <p className="text-red-400 text-sm font-mono mt-4 bg-red-900/10 py-2 px-3 rounded border border-red-900/30">{serverError}</p>
+                    )}
+                    {serverSuccess && (
+                      <p className="text-emerald-400 text-sm font-mono mt-4 bg-emerald-900/10 py-2 px-3 rounded border border-emerald-900/30">{serverSuccess}</p>
+                    )}
+
+                    <button
+                      onClick={handleServerLogin}
+                      className="w-full mt-6 bg-[#D4AF37] hover:bg-[#C5A028] text-[#1A1A1A] py-3 rounded-lg font-bold font-mono text-sm transition-colors flex items-center justify-center gap-2"
+                    >
+                      <LogIn className="w-4 h-4" />
+                      LOGIN TO SERVER
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="h-px bg-[#333] my-6" />
+                  
+                  <div className="p-6 bg-emerald-900/10 rounded-xl border border-emerald-500/20">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <div className="w-2 h-2 rounded-full bg-emerald-400" />
+                          <p className="text-white font-medium">Connected to Server</p>
+                        </div>
+                        <p className="text-sm text-gray-400 font-mono">
+                          Logged in as <span className="text-[#D4AF37]">{username}</span>
+                        </p>
+                      </div>
+                      <button
+                        onClick={handleServerLogout}
+                        className="bg-red-500/10 hover:bg-red-500/20 text-red-400 px-4 py-2 rounded font-mono text-sm border border-red-500/20 transition-colors flex items-center gap-2"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        LOGOUT
+                      </button>
+                    </div>
+                  </div>
+
+                  {serverSuccess && (
+                    <p className="text-emerald-400 text-sm font-mono bg-emerald-900/10 py-2 px-3 rounded border border-emerald-900/30">{serverSuccess}</p>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Security Tab */}
+          {activeTab === 'security' && (
+            <div className="space-y-6 animate-fade-in">
+              <div className="p-6 bg-[#0A0A0A]/60 rounded-xl border border-[#D4AF37]/20">
+                <div className="flex items-center gap-3 mb-3">
+                  <Lock className="w-5 h-5 text-[#D4AF37]" />
+                  <p className="text-white font-medium">Application Lock</p>
+                </div>
+                <p className="text-sm text-gray-500 font-mono leading-relaxed">
+                  Set a PIN to encrypt your API keys and lock the application on startup. This is recommended if you are on a shared device.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                    <label className="block text-xs uppercase text-[#D4AF37] mb-2 font-mono opacity-80">
+                    New PIN
+                    </label>
+                    <input
+                    type="password"
+                    value={newPin}
+                    onChange={(e) => setNewPin(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+                    placeholder="4-6 digits"
+                    className="w-full bg-[#0A0A0A]/60 border border-[#D4AF37]/20 rounded-lg px-4 py-4 text-white focus:border-[#D4AF37]/60 focus:outline-none font-mono text-sm tracking-widest text-center transition-all duration-300 input-glow"
+                    />
+                </div>
+                <div>
+                    <label className="block text-xs uppercase text-[#D4AF37] mb-2 font-mono opacity-80">
+                    Confirm PIN
+                    </label>
+                    <input
+                    type="password"
+                    value={confirmPin}
+                    onChange={(e) => setConfirmPin(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+                    placeholder="Repeat PIN"
+                    className="w-full bg-[#0A0A0A]/60 border border-[#D4AF37]/20 rounded-lg px-4 py-4 text-white focus:border-[#D4AF37]/60 focus:outline-none font-mono text-sm tracking-widest text-center transition-all duration-300 input-glow"
+                    />
+                </div>
+              </div>
+
+              {pinError && (
+                <p className="text-red-400 text-sm font-mono text-center bg-red-900/10 py-2 rounded border border-red-900/30">{pinError}</p>
+              )}
+              {pinSuccess && (
+                <p className="text-emerald-400 text-sm font-mono text-center bg-emerald-900/10 py-2 rounded border border-emerald-900/30">{pinSuccess}</p>
+              )}
+
+              <div className="flex gap-4 pt-4">
+                <button
+                  onClick={handleSavePin}
+                  className="flex-1 bg-[#D4AF37] hover:bg-[#C5A028] text-[#1A1A1A] py-3 rounded font-bold font-mono text-sm transition-colors"
+                >
+                  SET PIN
+                </button>
+                <button
+                  onClick={handleRemovePin}
+                  className="flex-1 bg-red-500/10 hover:bg-red-500/20 text-red-500 py-3 rounded font-medium font-mono text-sm border border-red-500/20 transition-colors"
+                >
+                  REMOVE PIN
+                </button>
+              </div>
+              
+              <div className="h-px bg-[#333] my-8" />
+              
+              <div className="p-6 bg-[#0A0A0A] rounded-lg border border-[#333]">
+                <div className="flex items-center gap-3 mb-3">
+                  <Server className="w-5 h-5 text-[#D4AF37]" />
+                  <p className="text-white font-medium">Server Password</p>
+                </div>
+                <p className="text-sm text-gray-500 font-mono leading-relaxed">
+                  Change the password for the admin user on the self-hosted server.
+                </p>
+              </div>
+
+               <div className="grid grid-cols-2 gap-6">
+                <div>
+                    <label className="block text-xs uppercase text-[#D4AF37] mb-2 font-mono opacity-80">
+                    New Password
+                    </label>
+                    <input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="New Password"
+                    className="w-full bg-[#0A0A0A]/60 border border-[#D4AF37]/20 rounded-lg px-4 py-4 text-white focus:border-[#D4AF37]/60 focus:outline-none font-mono text-sm tracking-widest text-center transition-all duration-300 input-glow"
+                    />
+                </div>
+                <div>
+                    <label className="block text-xs uppercase text-[#D4AF37] mb-2 font-mono opacity-80">
+                    Confirm Password
+                    </label>
+                    <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Confirm Password"
+                    className="w-full bg-[#0A0A0A]/60 border border-[#D4AF37]/20 rounded-lg px-4 py-4 text-white focus:border-[#D4AF37]/60 focus:outline-none font-mono text-sm tracking-widest text-center transition-all duration-300 input-glow"
+                    />
+                </div>
+              </div>
+
+              {passwordError && (
+                <p className="text-red-400 text-sm font-mono text-center bg-red-900/10 py-2 rounded border border-red-900/30">{passwordError}</p>
+              )}
+              {passwordSuccess && (
+                <p className="text-emerald-400 text-sm font-mono text-center bg-emerald-900/10 py-2 rounded border border-emerald-900/30">{passwordSuccess}</p>
+              )}
+
+              <button
+                  onClick={handleChangePassword}
+                  className="w-full bg-[#D4AF37] hover:bg-[#C5A028] text-[#1A1A1A] py-3 rounded font-bold font-mono text-sm transition-colors"
+                >
+                  CHANGE PASSWORD
+              </button>
+            </div>
+          )}
+
+            {/* Save Button (Floating) */}
+            <div className="absolute top-8 right-8">
+                <button
+                    onClick={handleSave}
+                    className="bg-[#D4AF37] hover:bg-[#E5C048] text-[#0A0A0A] px-8 py-3 rounded-xl font-bold flex items-center gap-2 font-mono text-sm shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:shadow-[0_0_30px_rgba(212,175,55,0.5)] transition-all transform hover:-translate-y-1 active:translate-y-0"
+                >
+                    <Save className="w-4 h-4" />
+                    {saveStatus || 'SAVE CHANGES'}
+                </button>
+            </div>
+
+        </div>
+      </div>
+    </div>
+  );
+}

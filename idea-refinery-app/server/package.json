@@ -7,9 +7,12 @@
     "dev": "node --watch index.js"
   },
   "dependencies": {
+    "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "express": "^4.21.2",
     "express-rate-limit": "^8.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.17.1",
     "resend": "^6.7.0"
   }
 }

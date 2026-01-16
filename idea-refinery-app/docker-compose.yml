@@ -6,27 +6,48 @@ services:
     container_name: idea-refinery
     restart: unless-stopped
     ports:
-      - "3001:3001"
+      - "127.0.0.1:3001:3001"  # Bind to localhost only
     environment:
       - PORT=3001
-      - DATABASE_URL=postgres://user:password@postgres:5432/idearefinery
-      # Add other environment variables here if needed
-      # - ANTHROPIC_API_KEY=your_key_here
+      - DATABASE_URL=postgres://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-idearefinery}
+      - JWT_SECRET=${JWT_SECRET:-dev-secret-key-change-in-prod}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-https://ideas.mkgbuilds.com,capacitor://localhost,http://localhost}
+      - NODE_ENV=${NODE_ENV:-production}
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - idea-refinery-network
 
   postgres:
     image: postgres:15-alpine
     container_name: idea-refinery-db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: idearefinery
+      POSTGRES_USER: ${POSTGRES_USER:-user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-idearefinery}
     volumes:
       - db_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"  # Bind to localhost only
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - idea-refinery-network
+
+networks:
+  idea-refinery-network:
+    driver: bridge
 
 volumes:
   db_data:

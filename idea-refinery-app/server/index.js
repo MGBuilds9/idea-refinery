@@ -1,11 +1,31 @@
 import express from 'express';
 import cors from 'cors';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 import { pool } from './db.js';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key-change-in-prod';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-app.use(cors());
+// CORS configuration for web and iOS
+const allowedOrigins = process.env.ALLOWED_ORIGINS 
+  ? process.env.ALLOWED_ORIGINS.split(',') 
+  : ['https://ideas.mkgbuilds.com', 'capacitor://localhost', 'http://localhost', 'http://localhost:5173'];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.some(allowed => origin.startsWith(allowed))) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+}));
 app.use(express.json({ limit: '50mb' }));
 
 // Serve static files from the dist directory
@@ -39,6 +59,127 @@ const apiLimiter = rateLimit({
 
 // Apply to all API routes
 app.use('/api/', apiLimiter);
+
+// Authentication Middleware
+const authenticateToken = (req, res, next) => {
+  // Allow login/health without token
+  if (req.path === '/api/auth/login' || req.path === '/health') {
+    return next();
+  }
+
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (token == null) return res.sendStatus(401);
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) return res.sendStatus(403);
+    req.user = user;
+    next();
+  });
+};
+
+// Apply auth middleware to API routes (excluding public ones handled inside)
+// Actually, it's better to apply it specifically to protected routes or use a wrapper.
+// For now, let's just expose the auth endpoints publicly and protect sync/ai endpoints if desired.
+// Since the user wants a simple admin login, let's protect everything under /api except auth.
+
+app.post('/api/auth/login', async (req, res) => {
+  const { username, password } = req.body;
+  try {
+    const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
+    const user = result.rows[0];
+
+    if (!user) {
+      return res.status(400).json({ error: 'User not found' });
+    }
+
+    if (await bcrypt.compare(password, user.password_hash)) {
+      const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '24h' });
+      res.json({ token });
+    } else {
+      res.status(403).json({ error: 'Invalid password' });
+    }
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Login error' });
+  }
+});
+
+app.post('/api/auth/change-password', authenticateToken, async (req, res) => {
+  const { newPassword } = req.body;
+  try {
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hashedPassword, req.user.id]);
+    res.json({ success: true });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Error changing password' });
+  }
+});
+
+// Sync Endpoints
+// POST - Push data to server (upsert)
+app.post('/api/sync', authenticateToken, async (req, res) => {
+  const { deviceId, data } = req.body;
+  const userId = req.user.id;
+
+  if (!data) {
+    return res.status(400).json({ error: 'Data is required' });
+  }
+
+  try {
+    // Upsert: update if exists, insert if not
+    const result = await pool.query(
+      `INSERT INTO sync_data (user_id, device_id, data, updated_at) 
+       VALUES ($1, $2, $3, NOW()) 
+       ON CONFLICT (user_id) 
+       DO UPDATE SET device_id = $2, data = $3, updated_at = NOW()
+       RETURNING updated_at`,
+      [userId, deviceId || 'unknown', data]
+    );
+
+    res.json({ 
+      success: true, 
+      updatedAt: result.rows[0].updated_at 
+    });
+  } catch (e) {
+    console.error('Sync error:', e);
+    res.status(500).json({ error: 'Sync failed' });
+  }
+});
+
+// GET - Pull data from server
+app.get('/api/sync', authenticateToken, async (req, res) => {
+  const userId = req.user.id;
+
+  try {
+    const result = await pool.query(
+      'SELECT data, updated_at FROM sync_data WHERE user_id = $1',
+      [userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.json({ data: null, updatedAt: null });
+    }
+
+    res.json({
+      data: result.rows[0].data,
+      updatedAt: result.rows[0].updated_at
+    });
+  } catch (e) {
+    console.error('Sync pull error:', e);
+    res.status(500).json({ error: 'Failed to retrieve sync data' });
+  }
+});
+
+// Protect Sync and AI Routes if necessary. 
+// For now, note that existing routes are below. We can inject the middleware there.
+// Or we can just apply it globally for /api and exclude login.
+app.use('/api', (req, res, next) => {
+    if (req.path === '/auth/login' || req.path === '/health') return next();
+    authenticateToken(req, res, next);
+});
 
 // Anthropic Proxy
 app.post('/api/anthropic', async (req, res) => {

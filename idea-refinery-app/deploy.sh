@@ -1,31 +1,55 @@
 #!/bin/bash
 
-# Configuration
-HOST="192.168.0.7"
-USER="root"
-TARGET_DIR="/root/idea-refinery"
+# Quick deployment script for Idea Refinery
+# Run from the idea-refinery-app directory
 
-echo "🚀 Deploying Idea Refinery to $USER@$HOST..."
+set -e  # Exit on error
 
-# 1. Create target directory
-echo "📁 Creating directory on remote server..."
-ssh $USER@$HOST "mkdir -p $TARGET_DIR"
+echo "🚀 Deploying Idea Refinery..."
 
-# 2. Transfer files
-# We use tar to compress logic and stream it over SSH. 
-# Excludes node_modules, dist, .git, and brain artifacts.
-echo "📦 Transferring files..."
-tar --exclude='node_modules' \
-    --exclude='dist' \
-    --exclude='.git' \
-    --exclude='.DS_Store' \
-    --exclude='.env' \
-    -czf - . | ssh $USER@$HOST "tar -xzf - -C $TARGET_DIR"
+# Check if .env exists
+if [ ! -f .env ]; then
+    echo "⚠️  No .env file found. Creating from .env.example..."
+    cp .env.example .env
+    echo "📝 Please edit .env with your secure credentials before deploying!"
+    exit 1
+fi
 
-# 3. Build and Run on Server
-echo "🐳 Building and starting containers..."
-ssh $USER@$HOST "cd $TARGET_DIR && docker-compose down && docker-compose up -d --build"
+# Check if docker-compose is available
+if ! command -v docker-compose &> /dev/null; then
+    echo "❌ docker-compose not found. Please install Docker Compose."
+    exit 1
+fi
 
-echo "✅ Deployment successful!"
-echo "🌍 Access your app at: http://$HOST:3001"
-echo "🔧 Database is running on port 5432"
+# Stop existing containers
+echo "🛑 Stopping existing containers..."
+docker-compose down
+
+# Build and start
+echo "🏗️  Building and starting containers..."
+docker-compose up -d --build
+
+# Wait for services to be healthy
+echo "⏳ Waiting for services to be healthy..."
+sleep 5
+
+# Check container status
+echo "📊 Container status:"
+docker-compose ps
+
+# Show logs
+echo ""
+echo "📝 Recent logs:"
+docker-compose logs --tail=20
+
+echo ""
+echo "✅ Deployment complete!"
+echo "🌍 Web app: http://localhost:3001"
+echo "🔐 Default login: admin / admin123"
+echo ""
+echo "⚠️  IMPORTANT: Change the default password immediately!"
+echo "💡 Next steps:"
+echo "   1. Configure your reverse proxy to point to localhost:3001"
+echo "   2. Login to the app and change the default password"
+echo "   3. Configure API keys in Settings"
+echo "   4. Build and deploy iOS app with: npx cap sync ios"

@@ -1,10 +1,12 @@
 import React, { useState, useEffect, Suspense } from 'react';
-import { Sparkles, Settings, Zap, History } from 'lucide-react';
+import { Sparkles, Zap } from 'lucide-react';
+import Sidebar from './components/Sidebar';
 import InputStage from './components/InputStage';
 import QuestionsStage from './components/QuestionsStage';
-import SettingsModal from './components/SettingsModal';
-import HistoryModal from './components/HistoryModal';
+import SettingsView from './components/SettingsView';
+import HistoryView from './components/HistoryView';
 import PinLockScreen from './components/PinLockScreen';
+import LoginScreen from './components/LoginScreen';
 
 // Lazy load heavy stages
 const BlueprintStage = React.lazy(() => import('./components/BlueprintStage'));
@@ -15,20 +17,23 @@ import { SyncService } from './services/SyncService';
 import { PROMPTS } from './lib/prompts';
 
 function App() {
-  const [stage, setStage] = useState('input');
+  // Navigation State
+  const [activeView, setActiveView] = useState('input'); // 'input', 'history', 'settings'
+  const [stage, setStage] = useState('input'); // Sub-stage for the 'input/project' flow
+
   const [loading, setLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
-  const [showSettings, setShowSettings] = useState(false);
-  const [settingsWarning, setSettingsWarning] = useState('');
-  const [showHistory, setShowHistory] = useState(false);
+  
+  // History State
   const [historyItems, setHistoryItems] = useState([]);
   const [currentDbId, setCurrentDbId] = useState(null);
   
   // Security State
+  const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('authToken'));
   const [isLocked, setIsLocked] = useState(true);
   const [checkingLock, setCheckingLock] = useState(true);
   // eslint-disable-next-line no-unused-vars
-  const [activePin, setActivePin] = useState(null); // Used to decrypt keys in llm.js (Phase 1 final step)
+  const [activePin, setActivePin] = useState(null); 
   
   // Data State
   const [idea, setIdea] = useState('');
@@ -40,18 +45,12 @@ function App() {
   
   // Interaction State
   const [conversation, setConversation] = useState([]);
-  const [chatHistory, setChatHistory] = useState([]); // Full chat history for resumable convos
+  const [chatHistory, setChatHistory] = useState([]); 
   const [refinementInput, setRefinementInput] = useState('');
   const [blueprintTab, setBlueprintTab] = useState('preview');
 
   // Currently selected provider
   const [provider, setProvider] = useState(llm.getDefaultProvider());
-
-  // Listen for settings changes to update provider
-  // Listen for settings changes to update provider
-  const refreshProvider = () => {
-    setProvider(llm.getDefaultProvider());
-  };
 
   // DB Checks and PIN Lock
   useEffect(() => {
@@ -72,6 +71,7 @@ function App() {
     };
     checkPinLock();
     cleanupOldConversations().catch(console.error);
+    loadHistory(); // Load history initially
   }, []);
 
   const handleUnlock = async (pin) => {
@@ -82,14 +82,14 @@ function App() {
     setIsLocked(false);
   };
 
+  const handleLogin = (token) => {
+    localStorage.setItem('authToken', token);
+    setIsAuthenticated(true);
+  };
+
   const loadHistory = async () => {
     const items = await getRecentConversations();
     setHistoryItems(items);
-  };
-
-  const handleOpenHistory = () => {
-    loadHistory();
-    setShowHistory(true);
   };
 
   const handleLoadSession = (item, goToBlueprint = false) => {
@@ -116,7 +116,8 @@ function App() {
       setStage('input');
     }
     
-    setShowHistory(false);
+    // Switch to input/project view
+    setActiveView('input');
   };
 
   const handleDeleteSession = async (id) => {
@@ -144,43 +145,21 @@ function App() {
         // Sync to server
         const serverUrl = localStorage.getItem('serverUrl');
         if (serverUrl) {
-           // Fire and forget sync to not block UI
            SyncService.push(serverUrl, { ...fullData, id }).catch(console.error);
         }
+        
+        loadHistory(); // Refresh history list after save
 
     } catch (e) {
         console.error('Failed to auto-save:', e);
     }
   };
 
-  // Initial Sync
-  useEffect(() => {
-    const syncFromServer = async () => {
-      const serverUrl = localStorage.getItem('serverUrl');
-      if (!serverUrl) return;
-
-      try {
-        const result = await SyncService.pull(serverUrl);
-        if (result && result.data) {
-           // Check if server data is newer? For now simple load if we are empty
-           // Or just log it? 
-           // Let's being conservative: Only load if we are at 'input' stage and idea is empty
-           // Or maybe we should have a "Load from Server" button?
-           // For now, let's just log. "Auto-load" can be dangerous without conflict resolution.
-           console.log('Server has data:', result);
-        }
-      } catch (e) {
-        console.error('Sync check failed:', e);
-      }
-    };
-    syncFromServer();
-  }, []);
-
   // Helper to ensure API key exists
   const checkApiKey = (p = provider) => {
     if (!llm.getApiKey(p)) {
-      setShowSettings(true);
-      setSettingsWarning(`Please enter your ${p} API key to continue.`);
+      setActiveView('settings');
+      alert(`Please enter your ${p} API key in Settings to continue.`);
       return false;
     }
     return true;
@@ -210,6 +189,7 @@ function App() {
       
       setStage('questions');
     } catch (e) {
+      console.error(e);
       alert(`Error: ${e.message}`);
     } finally {
       setLoading(false);
@@ -223,8 +203,8 @@ function App() {
     // Also check second pass provider if enabled
     const settings = llm.getSettings();
     if (settings.enableSecondPass && !llm.getApiKey(settings.secondPassProvider)) {
-      setShowSettings(true);
-      setSettingsWarning(`Second pass is enabled. Please enter your ${settings.secondPassProvider} API key.`);
+      setActiveView('settings');
+      alert(`Second pass is enabled. Please enter your ${settings.secondPassProvider} API key in Settings.`);
       return;
     }
     
@@ -268,7 +248,7 @@ function App() {
       await saveProgress({ 
          blueprint: responseText, 
          masterPrompt: sections[1] ? sections[1].trim() : '',
-         answers // save answers too if not saved yet
+         answers 
       });
 
       setStage('blueprint');
@@ -316,11 +296,9 @@ function App() {
       
       setConversation(prev => [...prev, assistantMsg]);
       
-      // Update chat history with both messages for resumable conversations
       const newChatHistory = [...chatHistory, { ...userMsg, timestamp: Date.now() - 1000 }, assistantMsg];
       setChatHistory(newChatHistory);
 
-      // Save with updated chat history
       await saveProgress({ 
          blueprint: responseText, 
          masterPrompt: sections[1] ? sections[1].trim() : '',
@@ -345,23 +323,19 @@ function App() {
       const model = llm.getModelForStage('mockup');
       let html = await llm.generate(provider, { system, prompt, model, maxTokens: 8000 });
       
-      // Clean up markdown fences
       html = html.replace(/```html\n?/g, '').replace(/```\n?/g, '').trim();
       
-      // Inject copy script if missing
       if (!html.includes('id="markdown-content"')) {
          const insertPoint = html.lastIndexOf('</body>');
          if (insertPoint !== -1) {
             const extra = `
-    <div style="display:none;"><pre id="markdown-content">${blueprint.replace(/</g, '&lt;')}</pre></div>
+     <div style="display:none;"><pre id="markdown-content">${blueprint.replace(/</g, '&lt;')}</pre></div>
             `;
             html = html.slice(0, insertPoint) + extra + html.slice(insertPoint);
          }
       }
 
       setHtmlMockup(html);
-      
-      // Save
       await saveProgress({ htmlMockup: html });
 
     } catch (e) {
@@ -385,161 +359,168 @@ function App() {
     URL.revokeObjectURL(url);
   };
 
-  // Check if second pass is enabled for UI indicator
   const isSecondPassEnabled = llm.isSecondPassEnabled();
+
+  // Handle new project creation from Sidebar
+  const handleViewChange = (view) => {
+      // If we are already on input and click input again, maybe reset?
+      if (view === 'input' && activeView !== 'input') {
+          // Switching back to project view, keep state
+      } else if (view === 'input' && activeView === 'input') {
+          // If already on input, asking to start new
+          if (confirm('Start a new project? Unsaved progress will be lost if not autosaved.')) {
+            setIdea('');
+            setQuestions([]);
+            setAnswers({});
+            setBlueprint('');
+            setHtmlMockup('');
+            setCurrentDbId(null);
+            setStage('input');
+          } else {
+              return; // Cancel switch
+          }
+      }
+      
+      // Always refresh history when entering history view
+      if (view === 'history') {
+          loadHistory();
+      }
+
+      setActiveView(view);
+  };
 
   return (
     <>
-      {/* Loading state while checking PIN */}
       {checkingLock && (
         <div className="min-h-screen bg-[#1A1A1A] flex items-center justify-center">
           <Sparkles className="w-8 h-8 text-[#D4AF37] animate-pulse" />
         </div>
       )}
 
-      {/* PIN Lock Screen */}
-      {!checkingLock && isLocked && (
+      {!checkingLock && !isAuthenticated && (
+        <LoginScreen onLogin={handleLogin} />
+      )}
+
+      {!checkingLock && isAuthenticated && isLocked && (
         <PinLockScreen onUnlock={handleUnlock} />
       )}
 
-      {/* Main App */}
-      {!checkingLock && !isLocked && (
-    <div className="min-h-screen bg-[#1A1A1A] text-white">
-      <div className="max-w-4xl mx-auto px-6 py-6 md:py-12">
-        {/* Header */}
-        <div className="mb-12 text-center relative">
-          <button 
-             onClick={() => setShowSettings(true)} 
-             className="absolute top-0 right-0 p-2 text-gray-400 hover:text-[#D4AF37] transition-colors"
-             title="Settings"
-          >
-             <Settings className="w-5 h-5" />
-          </button>
-          
-          <button 
-             onClick={handleOpenHistory} 
-             className="absolute top-0 right-10 p-2 text-gray-400 hover:text-[#D4AF37] transition-colors"
-             title="History"
-          >
-             <History className="w-5 h-5" />
-          </button>
+      {!checkingLock && isAuthenticated && !isLocked && (
+        <div className="flex min-h-screen bg-[#1A1A1A] text-white font-sans selection:bg-[#D4AF37] selection:text-black">
+            
+            {/* Sidebar */}
+            <Sidebar activeView={activeView} onViewChange={handleViewChange} />
 
-          <div className="flex flex-col items-center gap-6 mb-8">
-            <img 
-              src="/idea-refinery-logo.svg" 
-              alt="Idea Refinery Logo" 
-              className="w-24 h-24 object-contain drop-shadow-[0_0_15px_rgba(212,175,55,0.15)] animate-fade-in"
-            />
-          </div>
-          
-          {/* Second Pass Indicator */}
-          {isSecondPassEnabled && (
-            <div className="inline-flex items-center gap-1 mt-2 px-2 py-1 bg-purple-900/30 border border-purple-500/30 rounded-full">
-              <Zap className="w-3 h-3 text-purple-400" />
-              <span className="text-xs text-purple-300 font-mono">Second Pass Enabled</span>
-            </div>
-          )}
-          
-          {settingsWarning && (
-            <p className="text-[#D4AF37] text-xs mt-2 font-mono animate-pulse">{settingsWarning}</p>
-          )}
+            {/* Main Content */}
+            <main className="flex-1 ml-64 p-8 overflow-y-auto">
+                
+                {/* Header (Context sensitive) */}
+                <div className="mb-12 flex justify-end">
+                     {activeView === 'input' && isSecondPassEnabled && (
+                        <div className="inline-flex items-center gap-1 px-3 py-1 bg-purple-900/30 border border-purple-500/30 rounded-full animate-fade-in">
+                        <Zap className="w-3 h-3 text-purple-400" />
+                        <span className="text-xs text-purple-300 font-mono">Second Pass Enabled</span>
+                        </div>
+                    )}
+                </div>
+
+                {/* Views */}
+                {activeView === 'settings' && (
+                    <SettingsView />
+                )}
+
+                {activeView === 'history' && (
+                    <HistoryView 
+                        historyItems={historyItems}
+                        onLoad={handleLoadSession}
+                        onDelete={handleDeleteSession}
+                    />
+                )}
+
+                {activeView === 'input' && (
+                    <div className="max-w-4xl mx-auto">
+                        
+                        {/* Logo on new project screen only */}
+                        {stage === 'input' && (
+                            <div className="flex flex-col items-center gap-6 mb-12 animate-fade-in">
+                                <img 
+                                src="/idea-refinery-logo.svg" 
+                                alt="Idea Refinery Logo" 
+                                className="w-64 h-64 object-contain drop-shadow-[0_0_35px_rgba(212,175,55,0.3)]"
+                                />
+                            </div>
+                        )}
+
+                        {stage === 'input' && (
+                            <InputStage 
+                                idea={idea} 
+                                setIdea={setIdea} 
+                                onNext={handleGenerateQuestions} 
+                                loading={loading}
+                            />
+                        )}
+
+                        {stage === 'questions' && (
+                            <QuestionsStage 
+                                questions={questions} 
+                                answers={answers} 
+                                setAnswers={setAnswers} 
+                                onNext={handleGenerateBlueprint}
+                                onBack={() => setStage('input')}
+                                loading={loading}
+                            />
+                        )}
+
+                        {stage === 'generating' && (
+                            <div className="flex flex-col items-center justify-center py-20 animate-pulse">
+                                <Sparkles className="w-16 h-16 text-[#D4AF37] mb-6" />
+                                <p className="text-xl text-gray-300 font-mono">{loadingMessage || 'Crafting your blueprint...'}</p>
+                                {isSecondPassEnabled && loadingMessage.includes('Refining') && (
+                                <div className="flex items-center gap-2 mt-4 text-purple-300">
+                                    <Zap className="w-5 h-5" />
+                                    <span className="text-sm font-mono">Second AI is reviewing...</span>
+                                </div>
+                                )}
+                            </div>
+                        )}
+
+                        {stage === 'blueprint' && (
+                            <Suspense fallback={<div className="text-center font-mono py-20">Loading Blueprint...</div>}>
+                                <BlueprintStage 
+                                blueprint={blueprint}
+                                conversation={conversation}
+                                onRefine={handleRefineBlueprint}
+                                onGenerateMockup={handleGenerateMockup}
+                                onStartOver={() => setStage('input')}
+                                loading={loading}
+                                refinementInput={refinementInput}
+                                setRefinementInput={setRefinementInput}
+                                currentTab={blueprintTab}
+                                setTab={setBlueprintTab}
+                                />
+                            </Suspense>
+                        )}
+
+                        {stage === 'mockup' && (
+                             <Suspense fallback={<div className="text-center font-mono py-20">Loading Visualization...</div>}>
+                                 <MockupStage 
+                                 masterPrompt={masterPrompt}
+                                 htmlMockup={htmlMockup}
+                                 loading={loading}
+                                 onStartOver={() => setStage('input')}
+                                 onDownloadMarkdown={() => downloadFile(blueprint, 'blueprint.md', 'text/markdown')}
+                                 onDownloadHTML={() => downloadFile(htmlMockup, 'mockup.html', 'text/html')}
+                                 onDownloadBoth={() => {
+                                     downloadFile(blueprint, 'blueprint.md', 'text/markdown');
+                                     setTimeout(() => downloadFile(htmlMockup, 'mockup.html', 'text/html'), 100);
+                                 }}
+                                 />
+                             </Suspense>
+                        )}
+                    </div>
+                )}
+            </main>
         </div>
-
-        {stage === 'input' && (
-          <InputStage 
-            idea={idea} 
-            setIdea={setIdea} 
-            onNext={handleGenerateQuestions} 
-            loading={loading}
-            onOpenSettings={() => setShowSettings(true)}
-          />
-        )}
-
-        {stage === 'questions' && (
-          <QuestionsStage 
-            questions={questions} 
-            answers={answers} 
-            setAnswers={setAnswers} 
-            onNext={handleGenerateBlueprint}
-            onBack={() => setStage('input')}
-            loading={loading}
-          />
-        )}
-
-        {stage === 'generating' && (
-           <div className="flex flex-col items-center justify-center py-20 animate-pulse">
-             <Sparkles className="w-12 h-12 text-[#D4AF37] mb-4" />
-             <p className="text-gray-300 font-mono">{loadingMessage || 'Crafting your blueprint...'}</p>
-             {isSecondPassEnabled && loadingMessage.includes('Refining') && (
-               <div className="flex items-center gap-2 mt-3 text-purple-300">
-                 <Zap className="w-4 h-4" />
-                 <span className="text-xs font-mono">Second AI is reviewing...</span>
-               </div>
-             )}
-           </div>
-        )}
-
-        {stage === 'blueprint' && (
-          <Suspense fallback={
-             <div className="flex flex-col items-center justify-center py-20">
-               <Sparkles className="w-12 h-12 text-[#D4AF37] animate-pulse mb-4" />
-               <p className="text-gray-300 font-mono">Loading blueprint engine...</p>
-             </div>
-          }>
-            <BlueprintStage 
-              blueprint={blueprint}
-              conversation={conversation}
-              onRefine={handleRefineBlueprint}
-              onGenerateMockup={handleGenerateMockup}
-              onStartOver={() => setStage('input')}
-              loading={loading}
-              refinementInput={refinementInput}
-              setRefinementInput={setRefinementInput}
-              currentTab={blueprintTab}
-              setTab={setBlueprintTab}
-            />
-          </Suspense>
-        )}
-
-        {stage === 'mockup' && (
-          <Suspense fallback={
-             <div className="flex flex-col items-center justify-center py-20">
-               <Sparkles className="w-12 h-12 text-[#D4AF37] animate-pulse mb-4" />
-               <p className="text-gray-300 font-mono">Loading visualization engine...</p>
-             </div>
-          }>
-            <MockupStage 
-              masterPrompt={masterPrompt}
-              htmlMockup={htmlMockup}
-              loading={loading}
-              onStartOver={() => setStage('input')}
-              onDownloadMarkdown={() => downloadFile(blueprint, 'blueprint.md', 'text/markdown')}
-              onDownloadHTML={() => downloadFile(htmlMockup, 'mockup.html', 'text/html')}
-              onDownloadBoth={() => {
-                downloadFile(blueprint, 'blueprint.md', 'text/markdown');
-                setTimeout(() => downloadFile(htmlMockup, 'mockup.html', 'text/html'), 100);
-              }}
-            />
-          </Suspense>
-        )}
-      </div>
-
-      {showSettings && (
-        <SettingsModal onClose={() => {
-          setShowSettings(false);
-          setSettingsWarning('');
-          refreshProvider();
-        }} />
-      )}
-
-      <HistoryModal 
-        isOpen={showHistory}
-        onClose={() => setShowHistory(false)}
-        history={historyItems}
-        onLoad={handleLoadSession}
-        onDelete={handleDeleteSession}
-      />
-    </div>
       )}
     </>
   );

@@ -43,6 +43,15 @@
   animation: fade-in 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+@keyframes slide-in-left {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+.animate-slide-in-left {
+  animation: slide-in-left 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 .glass-panel {
   background: rgba(18, 18, 18, 0.7);
   backdrop-filter: blur(12px);

@@ -1,16 +1,65 @@
-# React + Vite
+# Idea Refinery
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A premium AI-powered application for refining and developing project ideas using multiple LLM providers (Claude, GPT, Gemini). Features a beautiful glassmorphic UI with local PIN security, encrypted API key storage, and self-hosted multi-device sync capabilities.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- 🎨 **Premium UI** - Glassmorphic design with black/gold aesthetic
+- 🤖 **Multi-LLM Support** - Use Claude, GPT-4, or Gemini for idea generation
+- 🔒 **Secure** - PIN-based encryption for API keys and local data
+- 📱 **Cross-Platform** - Web app + native iOS app via Capacitor
+- 🔄 **Self-Hosted Sync** - Deploy to your homelab with Docker for multi-device sync
+- ⚡ **Second-Pass Refinement** - Auto-critique and improve output with a second AI
 
-## React Compiler
+## Getting Started
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Development
 
-## Expanding the ESLint configuration
+```bash
+# Install dependencies
+npm install
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+# Run development server
+npm run dev
+
+# Run both frontend and backend
+npm run dev:all
+```
+
+Visit `http://localhost:5173` to see the app.
+
+### Production Deployment
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for complete self-hosting instructions with Docker.
+
+### iOS Development
+
+```bash
+# Build web app
+npm run build
+
+# Sync with iOS
+npx cap sync ios
+
+# Open in Xcode
+npx cap open ios
+```
+
+## Architecture
+
+- **Frontend**: React 19 + Vite + TailwindCSS
+- **Backend**: Express.js + PostgreSQL
+- **Mobile**: Capacitor for iOS
+- **Deployment**: Docker + Docker  Compose
+- **Storage**: IndexedDB (local) + PostgreSQL (server sync)
+
+## Configuration
+
+Copy `.env.example` to `.env` and configure:
+- JWT_SECRET - For server authentication
+- DATABASE_URL - PostgreSQL connection
+- ALLOWED_ORIGINS - CORS configuration
+
+## License
+
+Private - © 2026
