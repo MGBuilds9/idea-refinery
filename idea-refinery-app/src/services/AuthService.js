@@ -41,10 +41,44 @@ export const AuthService = {
       localStorage.setItem('auth_token', token);
       localStorage.setItem('username', username);
       localStorage.setItem('server_url', serverUrl);
+      localStorage.setItem('sync_mode', 'server');
       
       return { success: true, token };
     } catch (error) {
       console.error('Login error:', error);
+      throw error;
+    }
+  },
+
+  // Register new user
+  async register(serverUrl, username, password) {
+    const baseUrl = serverUrl.replace(/\/$/, '');
+    
+    try {
+      const response = await fetch(`${baseUrl}/api/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Registration failed');
+      }
+
+      const { token, userId } = await response.json();
+      
+      // Store token and username
+      localStorage.setItem('auth_token', token);
+      localStorage.setItem('username', username);
+      localStorage.setItem('server_url', serverUrl);
+      localStorage.setItem('sync_mode', 'server');
+      
+      return { success: true, token, userId };
+    } catch (error) {
+      console.error('Registration error:', error);
       throw error;
     }
   },

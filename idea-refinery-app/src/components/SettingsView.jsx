@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Save, Eye, EyeOff, Zap, Bot, Settings2, Lock, Server, LogIn, LogOut } from 'lucide-react';
+import { Save, Eye, EyeOff, Zap, Bot, Settings2, Lock, Server, LogIn, LogOut, Download, Database, CloudOff } from 'lucide-react';
 import { llm, AVAILABLE_MODELS } from '../lib/llm';
-import { saveSetting } from '../services/db';
+import { saveSetting, exportAllData } from '../services/db';
 import { hashPin } from '../services/crypto';
 import { AuthService } from '../services/AuthService';
 
@@ -110,6 +110,7 @@ export default function SettingsView() {
     { id: 'models', label: 'Models', icon: Bot },
     { id: 'secondpass', label: 'Second Pass', icon: Zap },
     { id: 'server', label: 'Server', icon: Settings2 },
+    { id: 'data', label: 'Data', icon: Database },
     { id: 'security', label: 'Security', icon: Lock }
   ];
 
@@ -590,7 +591,94 @@ export default function SettingsView() {
                      </button>
                 </div>
               </div>
+            </div>
+          )}
 
+          {/* Data Tab */}
+          {activeTab === 'data' && (
+            <div className="space-y-6 animate-fade-in">
+              {/* Sync Mode Status */}
+              <div className={`p-6 rounded-xl border ${
+                localStorage.getItem('sync_mode') === 'server' 
+                  ? 'bg-emerald-900/10 border-emerald-500/20'
+                  : 'bg-amber-900/10 border-amber-500/20'
+              }`}>
+                <div className="flex items-center gap-3 mb-3">
+                  {localStorage.getItem('sync_mode') === 'server' ? (
+                    <>
+                      <Server className="w-5 h-5 text-emerald-400" />
+                      <p className="text-white font-medium">Server Sync Enabled</p>
+                    </>
+                  ) : (
+                    <>
+                      <CloudOff className="w-5 h-5 text-amber-400" />
+                      <p className="text-white font-medium">Local-Only Mode</p>
+                    </>
+                  )}
+                </div>
+                <p className="text-sm text-gray-400 font-mono leading-relaxed">
+                  {localStorage.getItem('sync_mode') === 'server' 
+                    ? 'Your data is automatically synced to the server after each generation.'
+                    : 'Your data is only stored in this browser. Clearing your cache will permanently delete your data.'
+                  }
+                </p>
+                
+                {localStorage.getItem('sync_mode') !== 'server' && (
+                  <button
+                    onClick={() => setActiveTab('server')}
+                    className="mt-4 bg-[#D4AF37] hover:bg-[#C5A028] text-[#1A1A1A] px-4 py-2 rounded font-mono text-sm transition-colors flex items-center gap-2"
+                  >
+                    <Server className="w-4 h-4" />
+                    Connect to Server
+                  </button>
+                )}
+              </div>
+
+              <div className="h-px bg-[#333] my-6" />
+
+              {/* Export Data */}
+              <div className="p-6 bg-[#0A0A0A]/60 rounded-xl border border-[#D4AF37]/20">
+                <div className="flex items-center gap-3 mb-3">
+                  <Download className="w-5 h-5 text-[#D4AF37]" />
+                  <p className="text-white font-medium">Export Data</p>
+                </div>
+                <p className="text-sm text-gray-500 font-mono leading-relaxed mb-4">
+                  Download a JSON backup of all your generations, prompts, and settings.
+                </p>
+                
+                <button
+                  onClick={async () => {
+                    try {
+                      setSaveStatus('Exporting...');
+                      const data = await exportAllData();
+                      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `idea-refinery-backup-${new Date().toISOString().split('T')[0]}.json`;
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                      URL.revokeObjectURL(url);
+                      setSaveStatus('Exported!');
+                      setTimeout(() => setSaveStatus(''), 2000);
+                    } catch (e) {
+                      console.error(e);
+                      setSaveStatus('Export failed');
+                    }
+                  }}
+                  className="bg-[#D4AF37] hover:bg-[#C5A028] text-[#1A1A1A] px-6 py-3 rounded-lg font-bold font-mono text-sm transition-colors flex items-center gap-2"
+                >
+                  <Download className="w-4 h-4" />
+                  EXPORT ALL DATA
+                </button>
+              </div>
+
+              <div className="p-4 bg-[#111] border border-[#333] rounded-lg">
+                <p className="text-xs text-gray-500 font-mono leading-relaxed">
+                  💡 Tip: Export your data regularly if you're in local-only mode. You can also add more API keys in the API Keys tab to unlock models from other providers.
+                </p>
+              </div>
             </div>
           )}
 

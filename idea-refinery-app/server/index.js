@@ -105,7 +105,9 @@ if (fs.existsSync(distPath)) {
     console.log('📄 Files in dist:', files);
     const assetsPath = path.join(distPath, 'assets');
     if (fs.existsSync(assetsPath)) {
-      console.log('📄 Files in dist/assets:', fs.readdirSync(assetsPath));
+      const assetFiles = fs.readdirSync(assetsPath);
+      console.log('📄 Files in dist/assets:', assetFiles);
+      console.log(`📊 Total assets: ${assetFiles.length}`);
     } else {
       console.warn('⚠️  dist/assets directory missing!');
     }
@@ -116,11 +118,9 @@ if (fs.existsSync(distPath)) {
   console.error('❌ Dist directory does NOT exist at:', distPath);
 }
 
-// Explicitly handle assets to avoid falling back to index.html for missing JS/CSS
-// This prevents the "MIME type text/html" error when a script is 404.
-app.use('/assets', express.static(path.join(distPath, 'assets'), {
-  fallthrough: false // Disable fallback - return 404 immediately if not found
-}));
+// Explicitly handle assets with proper error handling
+// Allow fallthrough to 404 handler instead of throwing 500 errors
+app.use('/assets', express.static(path.join(distPath, 'assets')));
 
 app.use(express.static(distPath));
 
@@ -143,8 +143,8 @@ app.use('/api/', apiLimiter);
 
 // Authentication Middleware
 const authenticateToken = (req, res, next) => {
-  // Allow login/health without token
-  if (req.path === '/api/auth/login' || req.path === '/health') {
+  // Allow login/register/health without token
+  if (req.path === '/api/auth/login' || req.path === '/api/auth/register' || req.path === '/health') {
     return next();
   }
 
@@ -184,6 +184,44 @@ app.post('/api/auth/login', async (req, res) => {
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Login error' });
+  }
+});
+
+// User Registration (Open)
+app.post('/api/auth/register', async (req, res) => {
+  const { username, password } = req.body;
+  
+  // Validate input
+  if (!username || username.length < 3) {
+    return res.status(400).json({ error: 'Username must be at least 3 characters' });
+  }
+  
+  if (!password || password.length < 6) {
+    return res.status(400).json({ error: 'Password must be at least 6 characters' });
+  }
+  
+  try {
+    // Check for existing user
+    const existing = await pool.query('SELECT id FROM users WHERE username = $1', [username]);
+    if (existing.rows.length > 0) {
+      return res.status(409).json({ error: 'Username already exists' });
+    }
+    
+    // Create user
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const result = await pool.query(
+      'INSERT INTO users (username, password_hash) VALUES ($1, $2) RETURNING id, username',
+      [username, hashedPassword]
+    );
+    
+    const user = result.rows[0];
+    const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '24h' });
+    
+    console.log(`✅ New user registered: ${username}`);
+    res.json({ token, userId: user.id });
+  } catch (e) {
+    console.error('Registration error:', e);
+    res.status(500).json({ error: 'Registration failed' });
   }
 });
 
@@ -388,7 +426,7 @@ app.post('/api/email/send', authenticateToken, async (req, res) => {
 // For now, note that existing routes are below. We can inject the middleware there.
 // Or we can just apply it globally for /api and exclude login.
 app.use('/api', (req, res, next) => {
-    if (req.path === '/auth/login' || req.path === '/health') return next();
+    if (req.path === '/auth/login' || req.path === '/auth/register' || req.path === '/health') return next();
     authenticateToken(req, res, next);
 });
 
@@ -612,11 +650,13 @@ app.listen(PORT, () => {
 app.get('*', (req, res) => {
   // Don't serve index.html for API calls or assets that were missed
   if (req.path.startsWith('/api') || req.path.startsWith('/assets')) {
+    console.warn(`⚠️  404 - Asset/API not found: ${req.path}`);
     return res.status(404).send('Not Found');
   }
   
   const indexPath = path.resolve(distPath, 'index.html');
   if (fs.existsSync(indexPath)) {
+    console.log(`📄 Serving index.html for route: ${req.path}`);
     res.sendFile(indexPath, (err) => {
       if (err) {
         console.error('❌ Error sending index.html:', err);

@@ -23,10 +23,10 @@ export default function PinLockScreen({ onSuccess, isSetup = false }) {
       // Simulate verification delay
       setTimeout(() => {
         if (isSetup) {
-          localStorage.setItem('local_pin', pin);
+          localStorage.setItem('app_pin', pin);
           onSuccess();
         } else {
-          const stored = localStorage.getItem('local_pin');
+          const stored = localStorage.getItem('app_pin');
           if (stored === pin) {
              onSuccess(pin);
           } else {

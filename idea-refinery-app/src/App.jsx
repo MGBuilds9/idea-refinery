@@ -38,6 +38,8 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('auth_token'));
   const [isLocked, setIsLocked] = useState(true);
   const [checkingLock, setCheckingLock] = useState(true);
+  // Track if we just unlocked to prevent re-locking
+  const [sessionUnlocked, setSessionUnlocked] = useState(false);
   // eslint-disable-next-line no-unused-vars
   const [activePin, setActivePin] = useState(null); 
   
@@ -84,6 +86,13 @@ function App() {
 
     const checkPinLock = async () => {
       try {
+        // If session was already unlocked this session, don't re-lock
+        if (sessionUnlocked) {
+          setIsLocked(false);
+          setCheckingLock(false);
+          return;
+        }
+        
         // v1.2: Check local storage for PIN first
         const localPin = localStorage.getItem('app_pin');
         if (localPin) {
@@ -113,7 +122,7 @@ function App() {
     } else {
         setCheckingLock(false);
     }
-  }, [isOnboarding, publicBlueprintId]);
+  }, [isOnboarding, publicBlueprintId, sessionUnlocked]);
 
   const handleUnlock = async (pin) => {
     // Verify PIN against localStorage
@@ -139,17 +148,17 @@ function App() {
     // Initialize Prompt Service (load overrides)
     PromptService.init().catch(console.error);
 
+    // Mark session as unlocked to prevent re-locking
+    setSessionUnlocked(true);
     setIsLocked(false);
   };
   
   const handleOnboardingComplete = () => {
       setIsOnboarding(false);
-      // Onboarding saves 'onboarding_complete' and 'app_pin' to localStorage
-      // We should now be "authenticated" partially, or at least setup.
-      // Reload or just set state?
-      // Setting state triggers useEffect -> checkPinLock -> locks screen?
-      // We probably want to go straight to input, but "forcing" a login/unlock to verify PIN is good security.
-      // But for better UX, let's just unlock immediately.
+      // Onboarding saves 'onboarding_complete', 'app_pin', and 'auth_token' to localStorage
+      // Mark session as unlocked so useEffect won't re-lock
+      setSessionUnlocked(true);
+      setIsAuthenticated(true); // Onboarding already authenticated us
       setIsLocked(false);
       loadHistory();
   };
@@ -214,9 +223,10 @@ function App() {
         const id = await saveConversation(fullData);
         setCurrentDbId(id);
 
-        // Sync to server
+        // Auto-sync to server if in server mode
+        const syncMode = localStorage.getItem('sync_mode');
         const serverUrl = localStorage.getItem('server_url');
-        if (serverUrl) {
+        if (syncMode === 'server' && serverUrl) {
            SyncService.push(serverUrl, { ...fullData, id }).catch(console.error);
         }
         
@@ -506,14 +516,22 @@ function App() {
       )}
 
       {/* Main App Flow (Only if not onboarding or public blueprint) */}
+      {/* Auth priority: PIN first for returning users, login only if JWT missing/expired */}
       {!initializing && !publicBlueprintId && !checkingLock && !isOnboarding && (
        <>
-         {!isAuthenticated && (
-           <LoginScreen onLogin={handleLogin} />
-         )}
-
+         {/* Show PIN lock first if user has a PIN set and valid JWT */}
          {isAuthenticated && isLocked && (
            <PinLockScreen onSuccess={handleUnlock} />
+         )}
+
+         {/* Only show login screen if no valid JWT (expired or logged out) */}
+         {!isAuthenticated && !isLocked && (
+           <LoginScreen onLogin={handleLogin} />
+         )}
+         
+         {/* Edge case: no JWT but needs to set PIN first - redirect to login */}
+         {!isAuthenticated && isLocked && (
+           <LoginScreen onLogin={handleLogin} />
          )}
 
          {isAuthenticated && !isLocked && (

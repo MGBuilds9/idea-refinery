@@ -293,6 +293,23 @@ export default function OnboardingView({ onComplete }) {
                   {loading ? <Loader2 className="animate-spin w-4 h-4" /> : 'Connect Server'}
                   {!loading && <ArrowRight className="w-4 h-4" />}
                 </button>
+
+                {/* Local Only Option */}
+                <div className="border-t border-[#333] pt-4 mt-2">
+                  <button 
+                    onClick={() => {
+                      // Set local mode
+                      localStorage.setItem('sync_mode', 'local');
+                      setStep(3);
+                    }}
+                    className="w-full bg-transparent border border-[#444] hover:border-[#d4af37]/50 text-gray-400 hover:text-white font-medium p-3 rounded-lg flex items-center justify-center gap-2 transition-all"
+                  >
+                    Skip — Use Local Only
+                  </button>
+                  <p className="text-center text-xs text-amber-500/80 mt-3 px-4">
+                    ⚠️ Your generations and API keys will only exist in this browser. Clearing your cache will <strong>permanently delete</strong> your data.
+                  </p>
+                </div>
               </motion.div>
             )}
 

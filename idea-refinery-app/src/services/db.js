@@ -150,3 +150,33 @@ export async function pullItems(apiBaseUrl) {
     console.error('Pull error:', e);
   }
 }
+
+/**
+ * Export all local data for backup
+ * @returns {Object} All data in exportable format
+ */
+export async function exportAllData() {
+  const conversations = await db.conversations.toArray();
+  const settings = await db.settings.toArray();
+  const systemPrompts = await db.systemPrompts.toArray();
+  
+  // Include localStorage items that aren't sensitive
+  const localSettings = {
+    llm_provider: localStorage.getItem('llm_provider'),
+    sync_mode: localStorage.getItem('sync_mode'),
+    server_url: localStorage.getItem('server_url'),
+    username: localStorage.getItem('username')
+  };
+  
+  return {
+    version: '1.2',
+    exportedAt: new Date().toISOString(),
+    data: {
+      conversations,
+      settings,
+      systemPrompts,
+      localSettings
+    }
+  };
+}
+
