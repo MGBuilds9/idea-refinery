@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, RotateCcw, AlertTriangle, Loader2 } from 'lucide-react';
+import { Save, RotateCcw, Loader2 } from 'lucide-react';
 
 // Default prompt keys we support
 const PROMPT_TYPES = [
@@ -11,8 +11,8 @@ const PROMPT_TYPES = [
 
 export default function PromptStudio() {
   const [activeType, setActiveType] = useState('questions');
-  // const [prompts, setPrompts] = useState({}); // Unused, we use localEdits
-  const [localEdits, setLocalEdits] = useState({});
+  // Store structured edits: { system: string, prompt: string }
+  const [localEdits, setLocalEdits] = useState({}); 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
@@ -34,15 +34,28 @@ export default function PromptStudio() {
             const map = {};
             data.forEach(p => {
               try {
-                 map[p.type] = p.content;
+                 // Try to parse the content as JSON
+                 const parsed = JSON.parse(p.content);
+                 // Ensure we have expected keys, otherwise fallback
+                 if (typeof parsed === 'object' && parsed !== null) {
+                    map[p.type] = { 
+                        system: parsed.system || '', 
+                        prompt: parsed.prompt || '' 
+                    };
+                 } else {
+                    // Fallback for non-object content (shouldn't happen with strict schema but safe to handle)
+                    map[p.type] = { system: '', prompt: String(p.content) };
+                 }
               } catch {
-                 map[p.type] = p.content;
+                 // If it's not JSON, treat it as just the prompt part or handle gracefully
+                 map[p.type] = { system: '', prompt: p.content };
               }
             });
+            
             // Initialize local edits with fetched data
             const splits = {};
             PROMPT_TYPES.forEach(t => {
-               splits[t.id] = map[t.id] || ''; 
+               splits[t.id] = map[t.id] || { system: '', prompt: '' }; 
             });
             setLocalEdits(splits);
           }
@@ -54,21 +67,19 @@ export default function PromptStudio() {
       };
     
     fetchPrompts();
-  }, [serverUrl, token]); // Added dependencies
+  }, [serverUrl, token]);
 
   const handleSave = async () => {
     setSaving(true);
     setMessage('');
     try {
-      const content = localEdits[activeType];
-      try {
-        JSON.parse(content);
-      } catch {
-        if (!window.confirm("Warning: This prompt doesn't look like valid JSON. The app expects { system: '...', prompt: '...' }. Save anyway?")) {
-           setSaving(false);
-           return;
-        }
-      }
+      const currentEdit = localEdits[activeType] || { system: '', prompt: '' };
+      
+      // Reconstruct the JSON structure
+      const contentPayload = JSON.stringify({
+          system: currentEdit.system,
+          prompt: currentEdit.prompt
+      });
 
       const res = await fetch(`${serverUrl}/api/prompts`, {
         method: 'POST',
@@ -76,7 +87,7 @@ export default function PromptStudio() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ type: activeType, content })
+        body: JSON.stringify({ type: activeType, content: contentPayload })
       });
 
       if (res.ok) {
@@ -108,7 +119,19 @@ export default function PromptStudio() {
       
       if (res.ok) {
         const data = await res.json();
-        setLocalEdits(prev => ({ ...prev, [activeType]: data.content }));
+        // Parse the default content response
+        let parsedDefault = { system: '', prompt: '' };
+        try {
+            const parsed = JSON.parse(data.content);
+            parsedDefault = { 
+                system: parsed.system || '', 
+                prompt: parsed.prompt || '' 
+            };
+        } catch (e) {
+            console.error("Failed to parse default prompt", e);
+        }
+
+        setLocalEdits(prev => ({ ...prev, [activeType]: parsedDefault }));
         setMessage('Reset to default');
       }
     } catch (e) {
@@ -119,20 +142,28 @@ export default function PromptStudio() {
     }
   };
 
-  const handleChange = (val) => {
-    setLocalEdits(prev => ({ ...prev, [activeType]: val }));
+  const handleChange = (field, val) => {
+    setLocalEdits(prev => ({
+        ...prev,
+        [activeType]: {
+            ...prev[activeType],
+            [field]: val
+        }
+    }));
   };
+
+  const currentData = localEdits[activeType] || { system: '', prompt: '' };
 
   return (
     <div className="h-full flex flex-col bg-[#09090b] text-white">
       {/* Header */}
-      <div className="p-6 border-b border-[#333] flex justify-between items-center">
+      <div className="p-4 md:p-6 border-b border-[#333] flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold">Prompt Studio</h2>
-          <p className="text-gray-400 text-sm">Fine-tune the intelligence of the Vault.</p>
+          <h2 className="text-xl md:text-2xl font-bold">Prompt Studio</h2>
+          <p className="text-gray-400 text-xs md:text-sm">Fine-tune the intelligence of the Vault.</p>
         </div>
-        <div className="flex items-center gap-3">
-          {message && <span className="text-emerald-400 text-sm animate-pulse">{message}</span>}
+        <div className="flex items-center gap-2 md:gap-3 w-full md:w-auto justify-end">
+          {message && <span className="text-emerald-400 text-xs md:text-sm animate-pulse mr-auto md:mr-0">{message}</span>}
           <button 
             onClick={handleReset}
             className="p-2 text-gray-400 hover:text-white hover:bg-[#222] rounded-md transition-colors"
@@ -143,7 +174,7 @@ export default function PromptStudio() {
           <button 
             onClick={handleSave}
             disabled={saving}
-            className="bg-[#d4af37] text-black px-4 py-2 rounded-md font-semibold hover:bg-[#b5952f] transition-colors flex items-center gap-2"
+            className="bg-[#d4af37] text-black px-4 py-2 rounded-md font-semibold hover:bg-[#b5952f] transition-colors flex items-center gap-2 text-sm md:text-base whitespace-nowrap"
           >
             {saving ? <Loader2 className="animate-spin w-4 h-4"/> : <Save className="w-4 h-4" />}
             Save Changes
@@ -151,41 +182,60 @@ export default function PromptStudio() {
         </div>
       </div>
 
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
         {/* Sidebar */}
-        <div className="w-64 border-r border-[#333] bg-[#111] overflow-y-auto">
+        <div className="w-full md:w-64 border-b md:border-b-0 md:border-r border-[#333] bg-[#111] overflow-x-auto md:overflow-y-auto flex md:block shrink-0">
           {PROMPT_TYPES.map(type => (
             <button
               key={type.id}
               onClick={() => setActiveType(type.id)}
-              className={`w-full text-left p-4 border-b border-[#222] hover:bg-[#1a1a1a] transition-colors ${activeType === type.id ? 'bg-[#1a1a1a] border-l-4 border-l-[#d4af37]' : ''}`}
+              className={`min-w-[160px] md:w-full text-left p-3 md:p-4 border-r md:border-r-0 md:border-b border-[#222] hover:bg-[#1a1a1a] transition-colors ${activeType === type.id ? 'bg-[#1a1a1a] border-b-2 md:border-b border-[#d4af37] md:border-l-4 md:border-l-[#d4af37]' : ''}`}
             >
-              <div className="font-medium text-sm mb-1">{type.label}</div>
-              <div className="text-xs text-gray-500">{type.desc}</div>
+              <div className="font-medium text-sm mb-1 whitespace-nowrap md:whitespace-normal">{type.label}</div>
+              <div className="text-xs text-gray-500 hidden md:block">{type.desc}</div>
             </button>
           ))}
         </div>
 
         {/* Editor */}
-        <div className="flex-1 p-6 overflow-hidden flex flex-col">
-            <div className="bg-[#1a1a1a] border border-[#333] rounded-lg flex-1 flex flex-col overflow-hidden">
-               <div className="bg-[#111] px-4 py-2 text-xs text-gray-500 border-b border-[#333] flex items-center gap-2">
-                 <AlertTriangle className="w-3 h-3 text-yellow-500" />
-                 <span>Editing RAW JSON configuration. Be careful with syntax. Valid keys: "system", "prompt".</span>
-               </div>
-               {loading ? (
-                  <div className="flex-1 flex items-center justify-center">
-                    <Loader2 className="w-8 h-8 text-[#d4af37] animate-spin" />
-                  </div>
-               ) : (
-                 <textarea 
-                    value={localEdits[activeType] || ''}
-                    onChange={(e) => handleChange(e.target.value)}
-                    className="flex-1 w-full bg-[#09090b] text-white p-4 font-mono text-sm leading-relaxed outline-none resize-none"
-                    spellCheck="false"
-                 />
-               )}
-            </div>
+        <div className="flex-1 p-4 md:p-6 overflow-y-auto flex flex-col gap-4 md:gap-6">
+           {loading ? (
+              <div className="flex-1 flex items-center justify-center">
+                <Loader2 className="w-8 h-8 text-[#d4af37] animate-spin" />
+              </div>
+           ) : (
+             <>
+                {/* System Context Section */}
+                <div className="flex-none md:flex-[2] flex flex-col min-h-[200px] md:min-h-0 bg-[#1a1a1a] border border-[#333] rounded-lg overflow-hidden shrink-0">
+                   <div className="bg-[#111] px-4 py-2 text-xs font-semibold text-gray-400 border-b border-[#333] flex items-center justify-between">
+                     <span>SYSTEM CONTEXT</span>
+                     <span className="text-[#d4af37] opacity-60">Global</span>
+                   </div>
+                   <textarea 
+                      value={currentData.system}
+                      onChange={(e) => handleChange('system', e.target.value)}
+                      placeholder="You are an expert..."
+                      className="flex-1 w-full bg-[#09090b] text-white p-4 font-mono text-sm leading-relaxed outline-none resize-none focus:bg-[#000000]"
+                      spellCheck="false"
+                   />
+                </div>
+
+                {/* Prompt Template Section */}
+                <div className="flex-none md:flex-[3] flex flex-col min-h-[300px] md:min-h-0 bg-[#1a1a1a] border border-[#333] rounded-lg overflow-hidden shrink-0">
+                   <div className="bg-[#111] px-4 py-2 text-xs font-semibold text-gray-400 border-b border-[#333] flex items-center justify-between">
+                     <span>PROMPT TEMPLATE</span>
+                     <span className="text-[#d4af37] opacity-60">Variable injection</span>
+                   </div>
+                   <textarea 
+                      value={currentData.prompt}
+                      onChange={(e) => handleChange('prompt', e.target.value)}
+                      placeholder='I have a project idea: "${idea}"...'
+                      className="flex-1 w-full bg-[#09090b] text-white p-4 font-mono text-sm leading-relaxed outline-none resize-none focus:bg-[#000000]"
+                      spellCheck="false"
+                   />
+                </div>
+             </>
+           )}
         </div>
       </div>
     </div>

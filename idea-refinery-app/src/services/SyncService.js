@@ -1,4 +1,4 @@
-import { db, saveConversation, getRecentConversations } from './db.js';
+import { db } from './db.js';
 
 export const SyncService = {
   // Push local data to server

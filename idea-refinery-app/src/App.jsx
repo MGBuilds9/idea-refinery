@@ -1,6 +1,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { Sparkles, Zap } from 'lucide-react';
 import Sidebar from './components/Sidebar';
+import BottomNav from './components/BottomNav';
 import InputStage from './components/InputStage';
 import QuestionsStage from './components/QuestionsStage';
 import SettingsView from './components/SettingsView';
@@ -61,6 +62,9 @@ function App() {
 
   // Currently selected provider
   // const [provider, setProvider] = useState(llm.getDefaultProvider()); // Unused state, fetching dynamically
+
+  // Mobile Menu State
+
 
   // Initializing state for the app
   const [initializing, setInitializing] = useState(true);
@@ -537,14 +541,17 @@ function App() {
          {isAuthenticated && !isLocked && (
            <div className="flex min-h-screen bg-[var(--color-bg-deep)] text-white font-sans selection:bg-[var(--color-gold-subtle)] selection:text-white">
                
+
                {/* Sidebar */}
+
                <Sidebar activeView={activeView} onViewChange={handleViewChange} />
+               <BottomNav activeView={activeView} onViewChange={handleViewChange} />
 
                {/* Main Content */}
-               <main className="flex-1 ml-64 p-8 lg:p-12 overflow-y-auto relative">
+               <main className="flex-1 md:ml-64 ml-0 p-4 md:p-8 lg:p-12 overflow-y-auto relative pb-24 md:pb-12">
                    
                    {/* Header (Context sensitive) */}
-                   <div className="mb-12 flex justify-between items-center">
+                   <div className="mb-6 md:mb-12 flex justify-between items-center">
                      <div className="flex-1"></div> {/* Spacer */}
                      <div className="flex items-center gap-4">
                         {/* Token Usage Indicator */}
