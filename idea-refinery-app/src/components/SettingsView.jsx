@@ -212,22 +212,20 @@ export default function SettingsView() {
         <p className="text-zinc-500 font-mono text-sm tracking-wide">Manage API keys, models, and security protocols.</p>
       </div>
 
-      <div className="flex gap-8">
-        {/* Sidebar Nav for Settings */}
-        <div className="w-56 space-y-2">
+      <div className="flex flex-col md:flex-row gap-6 md:gap-8 relative">
+        {/* Sidebar Nav (Desktop) / Horizontal Tabs (Mobile) */}
+        <div className="w-full md:w-56 flex md:flex-col overflow-x-auto pb-2 md:pb-0 gap-2 hide-scrollbar shrink-0 snap-x">
             {tabs.map(tab => (
                 <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 font-mono text-sm text-left relative overflow-hidden ${
+                className={`snap-start whitespace-nowrap md:w-full flex items-center gap-2 md:gap-3 px-4 py-2 md:py-3 rounded-full md:rounded-lg transition-all duration-300 font-mono text-sm md:text-left relative overflow-hidden shrink-0 border ${
                     activeTab === tab.id 
-                    ? 'bg-[var(--color-gold-subtle)] text-[var(--color-gold-primary)] border border-[var(--color-gold-subtle)]' 
-                    : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'
+                    ? 'bg-[var(--color-gold-subtle)] text-[var(--color-gold-primary)] border-[var(--color-gold-primary)] md:border-[var(--color-gold-subtle)]' 
+                    : 'bg-white/5 md:bg-transparent text-zinc-500 hover:text-zinc-300 hover:bg-white/10 border-transparent'
                 }`}
                 >
-                {activeTab === tab.id && (
-                  <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-[var(--color-gold-primary)]" />
-                )}
+                <div className={`hidden md:block absolute left-0 top-0 bottom-0 w-0.5 transition-colors ${activeTab === tab.id ? 'bg-[var(--color-gold-primary)]' : 'bg-transparent'}`} />
                 <tab.icon className="w-4 h-4" />
                 {tab.label}
                 </button>
@@ -235,7 +233,7 @@ export default function SettingsView() {
         </div>
 
         {/* Content */}
-        <div className="flex-1 glass-panel rounded-xl p-8 min-h-[500px] relative transition-all duration-300">
+        <div className="flex-1 glass-panel rounded-xl p-4 pt-6 md:p-8 min-h-[500px] relative transition-all duration-300 pb-24 md:pb-8">
             
             {/* API Keys Tab */}
             {activeTab === 'keys' && (
@@ -801,11 +799,11 @@ export default function SettingsView() {
 
 
 
-            {/* Save Button (Floating) */}
-            <div className="absolute top-8 right-8">
+            {/* Save Button (Floating on Mobile / Top Right on Desktop) */}
+            <div className="fixed bottom-20 left-4 right-4 md:absolute md:top-8 md:right-8 md:bottom-auto md:left-auto md:w-auto z-40 md:z-auto">
                 <button
                     onClick={handleSave}
-                    className="bg-[#D4AF37] hover:bg-[#E5C048] text-[#0A0A0A] px-8 py-3 rounded-xl font-bold flex items-center gap-2 font-mono text-sm shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:shadow-[0_0_30px_rgba(212,175,55,0.5)] transition-all transform hover:-translate-y-1 active:translate-y-0"
+                    className="w-full md:w-auto justify-center bg-[#D4AF37] hover:bg-[#E5C048] text-[#0A0A0A] px-8 py-3 rounded-xl font-bold flex items-center gap-2 font-mono text-sm shadow-[0_4px_20px_rgba(212,175,55,0.4)] hover:shadow-[0_4px_30px_rgba(212,175,55,0.6)] transition-all transform hover:-translate-y-1 active:translate-y-0 active:scale-95"
                 >
                     <Save className="w-4 h-4" />
                     {saveStatus || 'SAVE CHANGES'}

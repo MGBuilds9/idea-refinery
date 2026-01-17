@@ -548,7 +548,7 @@ function App() {
                <BottomNav activeView={activeView} onViewChange={handleViewChange} />
 
                {/* Main Content */}
-               <main className="flex-1 md:ml-64 ml-0 p-4 md:p-8 lg:p-12 overflow-y-auto relative pb-24 md:pb-12">
+               <main className="flex-1 md:ml-64 ml-0 p-4 pt-[max(1rem,env(safe-area-inset-top))] md:p-8 md:pt-8 lg:p-12 lg:pt-12 overflow-y-auto relative pb-24 md:pb-12">
                    
                    {/* Header (Context sensitive) */}
                    <div className="mb-6 md:mb-12 flex justify-between items-center">

@@ -35,6 +35,7 @@ export default function OnboardingView({ onComplete }) {
   const [pin, setPin] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [skippedApiKey, setSkippedApiKey] = useState(false);
 
   // Check if API key format is valid for current provider
   const isKeyFormatValid = () => {
@@ -157,6 +158,18 @@ export default function OnboardingView({ onComplete }) {
     }
   };
 
+  const handleSkipToLogin = () => {
+    setSkippedApiKey(true);
+    setStep(2);
+    setError('');
+  };
+
+  const handleBackToExplanations = () => {
+    setStep(1);
+    setSkippedApiKey(false);
+    setError('');
+  };
+
   return (
     <div className="min-h-screen bg-[#09090b] text-white flex items-center justify-center p-6 relative overflow-hidden">
       {/* Background Decor */}
@@ -231,6 +244,16 @@ export default function OnboardingView({ onComplete }) {
                   {loading ? <Loader2 className="animate-spin w-4 h-4" /> : 'Validate & Continue'}
                   {!loading && <ArrowRight className="w-4 h-4" />}
                 </button>
+
+                {/* Option for existing users */}
+                <div className="mt-4 text-center">
+                    <button 
+                        onClick={handleSkipToLogin}
+                        className="text-sm text-[#d4af37] hover:underline hover:text-[#b5952f] transition-colors"
+                    >
+                        Already have an account? Login to Server
+                    </button>
+                </div>
               </motion.div>
             )}
 
@@ -244,6 +267,14 @@ export default function OnboardingView({ onComplete }) {
                 className="space-y-6"
               >
                 <div className="flex items-center gap-3 mb-6">
+                  {skippedApiKey && (
+                      <button 
+                        onClick={handleBackToExplanations}
+                        className="p-1 -ml-2 mr-1 text-gray-500 hover:text-white transition-colors"
+                      >
+                          <ArrowRight className="w-5 h-5 rotate-180" />
+                      </button>
+                  )}
                   <div className="w-8 h-8 rounded-full bg-[#d4af37]/20 flex items-center justify-center text-[#d4af37] font-bold">2</div>
                   <h2 className="text-xl font-semibold">Server Link</h2>
                 </div>
@@ -294,22 +325,24 @@ export default function OnboardingView({ onComplete }) {
                   {!loading && <ArrowRight className="w-4 h-4" />}
                 </button>
 
-                {/* Local Only Option */}
-                <div className="border-t border-[#333] pt-4 mt-2">
-                  <button 
-                    onClick={() => {
-                      // Set local mode
-                      localStorage.setItem('sync_mode', 'local');
-                      setStep(3);
-                    }}
-                    className="w-full bg-transparent border border-[#444] hover:border-[#d4af37]/50 text-gray-400 hover:text-white font-medium p-3 rounded-lg flex items-center justify-center gap-2 transition-all"
-                  >
-                    Skip — Use Local Only
-                  </button>
-                  <p className="text-center text-xs text-amber-500/80 mt-3 px-4">
-                    ⚠️ Your generations and API keys will only exist in this browser. Clearing your cache will <strong>permanently delete</strong> your data.
-                  </p>
-                </div>
+                {/* Local Only Option - Only show if they didn't skip the API key part */}
+                {!skippedApiKey && (
+                    <div className="border-t border-[#333] pt-4 mt-2">
+                    <button 
+                        onClick={() => {
+                        // Set local mode
+                        localStorage.setItem('sync_mode', 'local');
+                        setStep(3);
+                        }}
+                        className="w-full bg-transparent border border-[#444] hover:border-[#d4af37]/50 text-gray-400 hover:text-white font-medium p-3 rounded-lg flex items-center justify-center gap-2 transition-all"
+                    >
+                        Skip — Use Local Only
+                    </button>
+                    <p className="text-center text-xs text-amber-500/80 mt-3 px-4">
+                        ⚠️ Your generations and API keys will only exist in this browser. Clearing your cache will <strong>permanently delete</strong> your data.
+                    </p>
+                    </div>
+                )}
               </motion.div>
             )}
 
