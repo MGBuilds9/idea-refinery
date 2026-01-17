@@ -63,3 +63,18 @@ Copy `.env.example` to `.env` and configure:
 ## License
 
 Private - © 2026
+## Troubleshooting
+
+### Docker Compose Issues
+If you encounter `ModuleNotFoundError: No module named 'distutils'` when running `docker-compose`, it is due to a Python compatibility issue in macOS.
+
+**Workaround:**
+Use `docker compose` (v2, without the hyphen) instead of `docker-compose`.
+
+### Database Connection
+Ensure the Postgres container is running:
+```bash
+docker compose up -d postgres
+```
+
+The local app (`npm run dev`) connects to `localhost:5432` via the `.env` file.
