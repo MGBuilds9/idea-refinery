@@ -1,30 +1,31 @@
 import React from 'react';
-import { FileText, ArrowRight } from 'lucide-react';
+import { FileText, ArrowRight, ArrowLeft } from 'lucide-react';
 
 export default function QuestionsStage({ questions, answers, setAnswers, onNext, onBack, loading }) {
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-lg p-6">
-        <div className="flex items-center gap-2 mb-4 text-amber-400">
-          <FileText className="w-5 h-5" />
-          <h2 className="text-lg font-serif">
-            Refinement Questions
-          </h2>
+    <div className="space-y-8 animate-fade-in">
+      <div className="glass-panel rounded-2xl p-8">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 rounded-lg bg-[var(--color-gold-subtle)]">
+            <FileText className="w-5 h-5 text-[var(--color-gold-primary)]" />
+          </div>
+          <div>
+            <h2 className="text-xl font-serif text-white">Refinement Questions</h2>
+            <p className="text-zinc-500 text-sm font-mono">Answer these to generate your blueprint</p>
+          </div>
         </div>
-        <p className="text-slate-400 text-sm mb-6 font-mono">
-          Answer these to generate your comprehensive blueprint
-        </p>
 
-        <div className="space-y-5">
+        <div className="space-y-6">
           {questions.map((question, i) => (
-            <div key={i} className="space-y-2">
-              <label className="block text-sm text-slate-300 font-sans">
-                {i + 1}. {question}
+            <div key={i} className="space-y-3">
+              <label className="block text-sm text-zinc-300 font-medium">
+                <span className="text-[var(--color-gold-dim)] font-mono mr-2">{String(i + 1).padStart(2, '0')}.</span>
+                {question}
               </label>
               <textarea
                 value={answers[i] || ''}
                 onChange={(e) => setAnswers({ ...answers, [i]: e.target.value })}
-                className="w-full h-24 bg-slate-900/50 border border-slate-600 rounded px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition-colors resize-none text-sm font-sans"
+                className="w-full h-28 bg-[var(--color-bg-surface)] border border-[var(--glass-border)] rounded-xl px-5 py-4 text-white placeholder-zinc-600 focus:outline-none focus:border-[var(--color-gold-subtle)] focus:ring-1 focus:ring-[var(--color-gold-subtle)] transition-all resize-none text-sm"
                 placeholder="Your answer..."
               />
             </div>
@@ -32,17 +33,18 @@ export default function QuestionsStage({ questions, answers, setAnswers, onNext,
         </div>
       </div>
 
-      <div className="flex gap-3">
+      <div className="flex gap-4">
         <button
           onClick={onBack}
-          className="flex-1 bg-slate-700 hover:bg-slate-600 text-white py-4 rounded-lg transition-all font-mono"
+          className="flex items-center gap-2 px-6 py-4 bg-zinc-800/50 hover:bg-zinc-800 text-zinc-300 rounded-xl transition-all font-mono text-sm border border-zinc-700/50"
         >
-          START OVER
+          <ArrowLeft className="w-4 h-4" />
+          BACK
         </button>
         <button
           onClick={onNext}
           disabled={Object.values(answers).some(a => !a.trim()) || loading}
-          className="flex-1 bg-amber-500 hover:bg-amber-600 disabled:bg-slate-700 disabled:text-slate-500 text-slate-900 font-medium py-4 rounded-lg transition-all flex items-center justify-center gap-2 group font-mono"
+          className="flex-1 bg-[var(--color-gold-primary)] hover:bg-[#C5A028] disabled:bg-zinc-800 disabled:text-zinc-600 text-black font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-3 group font-mono text-sm shadow-[0_0_20px_var(--color-gold-subtle)] disabled:shadow-none"
         >
           GENERATE BLUEPRINT
           <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />

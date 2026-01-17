@@ -205,10 +205,10 @@ export default function SettingsView() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto animate-fade-in p-6">
-      <div className="mb-8">
-        <h2 className="text-3xl font-serif text-[#D4AF37] mb-2">System Configuration</h2>
-        <p className="text-gray-400 font-mono text-sm">Manage API keys, models, and security protocols.</p>
+    <div className="max-w-4xl mx-auto animate-fade-in">
+      <div className="mb-10">
+        <h2 className="text-4xl font-serif text-gold-gradient mb-3">System Configuration</h2>
+        <p className="text-zinc-500 font-mono text-sm tracking-wide">Manage API keys, models, and security protocols.</p>
       </div>
 
       <div className="flex gap-8">
@@ -218,12 +218,15 @@ export default function SettingsView() {
                 <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all font-mono text-sm text-left ${
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 font-mono text-sm text-left relative overflow-hidden ${
                     activeTab === tab.id 
-                    ? 'bg-[#D4AF37]/10 text-[#D4AF37] border border-[#D4AF37]/20' 
-                    : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
+                    ? 'bg-[var(--color-gold-subtle)] text-[var(--color-gold-primary)] border border-[var(--color-gold-subtle)]' 
+                    : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'
                 }`}
                 >
+                {activeTab === tab.id && (
+                  <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-[var(--color-gold-primary)]" />
+                )}
                 <tab.icon className="w-4 h-4" />
                 {tab.label}
                 </button>

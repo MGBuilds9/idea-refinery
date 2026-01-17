@@ -517,13 +517,13 @@ function App() {
          )}
 
          {isAuthenticated && !isLocked && (
-           <div className="flex min-h-screen bg-[#1A1A1A] text-white font-sans selection:bg-[#D4AF37] selection:text-black">
+           <div className="flex min-h-screen bg-[var(--color-bg-deep)] text-white font-sans selection:bg-[var(--color-gold-subtle)] selection:text-white">
                
                {/* Sidebar */}
                <Sidebar activeView={activeView} onViewChange={handleViewChange} />
 
                {/* Main Content */}
-               <main className="flex-1 ml-64 p-8 overflow-y-auto">
+               <main className="flex-1 ml-64 p-8 lg:p-12 overflow-y-auto relative">
                    
                    {/* Header (Context sensitive) */}
                    <div className="mb-12 flex justify-between items-center">
