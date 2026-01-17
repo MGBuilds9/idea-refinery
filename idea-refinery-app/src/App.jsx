@@ -548,10 +548,10 @@ function App() {
                <BottomNav activeView={activeView} onViewChange={handleViewChange} />
 
                {/* Main Content */}
-               <main className="flex-1 md:ml-64 ml-0 p-4 pt-[max(1rem,env(safe-area-inset-top))] md:p-8 md:pt-8 lg:p-12 lg:pt-12 overflow-y-auto relative pb-24 md:pb-12">
+               <main className="flex-1 md:ml-64 ml-0 p-4 md:p-8 lg:p-12 overflow-y-auto relative pb-24 md:pb-12">
                    
-                   {/* Header (Context sensitive) */}
-                   <div className="mb-6 md:mb-12 flex justify-between items-center">
+                   {/* Header (Context sensitive) - Hidden on mobile when not needed */}
+                   <div className="mb-2 md:mb-12 flex justify-between items-center">
                      <div className="flex-1"></div> {/* Spacer */}
                      <div className="flex items-center gap-4">
                         {/* Token Usage Indicator */}
@@ -590,11 +590,11 @@ function App() {
                         
                         {/* Logo on new project screen only */}
                         {stage === 'input' && (
-                            <div className="flex flex-col items-center gap-6 mb-12 animate-fade-in">
+                            <div className="flex flex-col items-center gap-4 md:gap-6 mb-6 md:mb-12 animate-fade-in">
                                 <img 
                                 src="/idea-refinery-logo.svg" 
                                 alt="Idea Refinery Logo" 
-                                className="w-64 h-64 object-contain drop-shadow-[0_0_35px_rgba(212,175,55,0.3)]"
+                                className="w-32 h-32 md:w-64 md:h-64 object-contain drop-shadow-[0_0_35px_rgba(212,175,55,0.3)]"
                                 />
                             </div>
                         )}

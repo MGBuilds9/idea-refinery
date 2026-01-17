@@ -73,6 +73,14 @@ export const PromptService = {
     // 2. Fallback to Default Function
     if (DEFAULT_PROMPTS[type]) {
         switch(type) {
+            // V1.5 Three-Agent System
+            case 'architect':
+                return DEFAULT_PROMPTS.architect(params.rawIdea || params.idea);
+            case 'critic':
+                return DEFAULT_PROMPTS.critic(params.ideaSpec);
+            case 'designerMockup':
+                return DEFAULT_PROMPTS.designerMockup(params.ideaSpec);
+            // Legacy V1.2 prompts
             case 'questions': 
                 return DEFAULT_PROMPTS.questions(params.idea);
             case 'blueprint': 

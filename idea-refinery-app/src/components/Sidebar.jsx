@@ -19,7 +19,7 @@ export default function Sidebar({ activeView, onViewChange, isOpen, onClose }) {
       )}
 
       {/* Sidebar Drawer */}
-      <div className={`w-64 bg-[var(--color-bg-surface)] border-r border-[var(--glass-border)] flex flex-col h-screen fixed left-0 top-0 z-50 backdrop-blur-md transition-transform duration-300 ease-in-out ${
+      <div className={`w-64 bg-[var(--color-bg-surface)] border-r border-[var(--glass-border)] hidden md:flex md:flex-col h-screen fixed left-0 top-0 z-50 backdrop-blur-md transition-transform duration-300 ease-in-out ${
           isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
       }`}>
         {/* Logo Area */}

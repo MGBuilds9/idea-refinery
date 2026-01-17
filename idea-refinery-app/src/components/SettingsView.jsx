@@ -207,9 +207,9 @@ export default function SettingsView() {
 
   return (
     <div className="max-w-4xl mx-auto animate-fade-in">
-      <div className="mb-10">
-        <h2 className="text-4xl font-serif text-gold-gradient mb-3">System Configuration</h2>
-        <p className="text-zinc-500 font-mono text-sm tracking-wide">Manage API keys, models, and security protocols.</p>
+      <div className="mb-4 md:mb-10">
+        <h2 className="text-2xl md:text-4xl font-serif text-gold-gradient mb-2 md:mb-3">System Configuration</h2>
+        <p className="text-zinc-500 font-mono text-xs md:text-sm tracking-wide">Manage API keys, models, and security protocols.</p>
       </div>
 
       <div className="flex flex-col md:flex-row gap-6 md:gap-8 relative">
@@ -233,7 +233,7 @@ export default function SettingsView() {
         </div>
 
         {/* Content */}
-        <div className="flex-1 glass-panel rounded-xl p-4 pt-6 md:p-8 min-h-[500px] relative transition-all duration-300 pb-24 md:pb-8">
+        <div className="flex-1 glass-panel rounded-xl p-4 pt-4 md:p-8 md:pt-6 min-h-[400px] md:min-h-[500px] relative transition-all duration-300">
             
             {/* API Keys Tab */}
             {activeTab === 'keys' && (
@@ -799,8 +799,8 @@ export default function SettingsView() {
 
 
 
-            {/* Save Button (Floating on Mobile / Top Right on Desktop) */}
-            <div className="fixed bottom-20 left-4 right-4 md:absolute md:top-8 md:right-8 md:bottom-auto md:left-auto md:w-auto z-40 md:z-auto">
+            {/* Save Button - In-flow on mobile, absolute on desktop */}
+            <div className="mt-8 mb-4 md:absolute md:top-6 md:right-6 md:mt-0 md:mb-0">
                 <button
                     onClick={handleSave}
                     className="w-full md:w-auto justify-center bg-[#D4AF37] hover:bg-[#E5C048] text-[#0A0A0A] px-8 py-3 rounded-xl font-bold flex items-center gap-2 font-mono text-sm shadow-[0_4px_20px_rgba(212,175,55,0.4)] hover:shadow-[0_4px_30px_rgba(212,175,55,0.6)] transition-all transform hover:-translate-y-1 active:translate-y-0 active:scale-95"

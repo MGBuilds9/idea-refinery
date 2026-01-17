@@ -1,15 +1,22 @@
 # Idea Refinery
 
-A premium AI-powered application for refining and developing project ideas using multiple LLM providers (Claude, GPT, Gemini). Features a beautiful glassmorphic UI with local PIN security, encrypted API key storage, and self-hosted multi-device sync capabilities.
+A premium, self-hosted application designed to refine raw ideas into technical blueprints and executable code. Built for architects, developers, and visionaries utilizing the power of multiple AI agents.
+
+**Built by [mkgbuilds](https://github.com/mkgbuilds), Michael Guirguis — Pharmacy Graduate & Tech Enthusiast.**
+
+## Core Philosophy
+**"The Golden Vault for your Intellectual Property."**
+A distraction-free, premium environment where ideas are refined into execution-ready specs using your own API keys and storage.
 
 ## Features
 
-- 🎨 **Premium UI** - Glassmorphic design with black/gold aesthetic
-- 🤖 **Multi-LLM Support** - Use Claude, GPT-4, or Gemini for idea generation
-- 🔒 **Secure** - PIN-based encryption for API keys and local data
-- 📱 **Cross-Platform** - Web app + native iOS app via Capacitor
-- 🔄 **Self-Hosted Sync** - Deploy to your homelab with Docker for multi-device sync
-- ⚡ **Second-Pass Refinement** - Auto-critique and improve output with a second AI
+- 🎨 **Premium UI** - Glassmorphic design with a "Deepest Zinc" & "Muted Gold" aesthetic.
+- 🤖 **Multi-LLM Support** - Bring your own keys (Claude, GPT-4, Gemini).
+- ⚡ **Second-Pass Refinement** - Automated critique by a secondary model ("The Critic") to reduce hallucinations and improve accuracy.
+- 🎭 **Prompt Personas** - Switch between "Strict Architect," "Creative Dreamer," or "MVP Focus" modes.
+- 🔒 **Secure & Sovereign** - PIN-based encryption, local-first architecture (Dexie.js), and self-hosted backend (Docker/Proxmox).
+- 📱 **Cross-Platform** - Seamless sync between Web App and Native iOS (Capacitor).
+- 📧 **Built-in Delivery** - Email refinements directly to yourself via Resend.
 
 ## Getting Started
 
@@ -62,7 +69,7 @@ Copy `.env.example` to `.env` and configure:
 
 ## License
 
-Private - © 2026
+© 2026 Michael Guirguis
 ## Troubleshooting
 
 ### Docker Compose Issues

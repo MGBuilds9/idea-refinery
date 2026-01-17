@@ -11,7 +11,7 @@ export default function InputStage({ idea, setIdea, onNext, selectedPersona, set
   };
 
   return (
-    <div className="min-h-[80vh] flex flex-col items-center justify-center px-4">
+    <div className="min-h-[50vh] md:min-h-[80vh] flex flex-col items-center justify-center px-4">
       {/* Prompt Persona Selector */}
       <PromptSelector 
         selectedPersona={selectedPersona} 
