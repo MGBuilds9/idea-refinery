@@ -11,16 +11,9 @@ export default function InputStage({ idea, setIdea, onNext, selectedPersona, set
   };
 
   return (
-    <div className="flex flex-col items-center w-full max-w-4xl mx-auto pt-4 md:pt-10 min-h-screen">
+    <div className="flex flex-col items-center w-full max-w-4xl mx-auto pt-0 md:pt-4 min-h-[calc(100vh-100px)]">
 
-      {/* 1. Logo at Top */}
-      <div className="mb-6 md:mb-8 animate-fade-in shrink-0">
-        <img
-          src="/idea-refinery-logo.svg"
-          alt="Idea Refinery Logo"
-          className="w-32 h-32 md:w-48 md:h-48 object-contain drop-shadow-[0_0_40px_rgba(212,175,55,0.4)]"
-        />
-      </div>
+
 
       {/* 2. Persona Selector */}
       <div className="w-full mb-8 shrink-0">
