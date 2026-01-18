@@ -14,7 +14,10 @@
   "dependencies": {
     "@capacitor/cli": "^8.0.1",
     "@capacitor/core": "^8.0.1",
+    "@capacitor/haptics": "^8.0.0",
     "@capacitor/ios": "^8.0.1",
+    "@capacitor/keyboard": "^8.0.0",
+    "@capacitor/status-bar": "^8.0.0",
     "@google/generative-ai": "^0.24.1",
     "@tailwindcss/vite": "^4.1.18",
     "autoprefixer": "^10.4.23",

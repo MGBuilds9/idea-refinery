@@ -18,21 +18,28 @@ import PublicBlueprintView from './components/PublicBlueprintView';
 const BlueprintStage = React.lazy(() => import('./components/BlueprintStage'));
 const MockupStage = React.lazy(() => import('./components/MockupStage'));
 import { llm } from './lib/llm';
-import { saveConversation, getRecentConversations, cleanupOldConversations, deleteConversation, getSetting, pullItems } from './services/db';
-import { SyncService } from './services/SyncService';
+import { cleanupOldConversations, getSetting, pullItems } from './services/db';
 import { PromptService } from './services/PromptService';
+import { useProjectState } from './hooks/useProjectState';
+
+// Feature flag or derived state
+const isSecondPassEnabled = false; 
+
 
 function App() {
-  // Navigation State
-  const [activeView, setActiveView] = useState('input'); // 'input', 'history', 'settings', 'prompts'
-  const [stage, setStage] = useState('input'); // Sub-stage for the 'input/project' flow
-
-  const [loading, setLoading] = useState(false);
-  const [loadingMessage, setLoadingMessage] = useState('');
+  const { state: projectState, actions: projectActions } = useProjectState();
+  const { 
+    activeView, stage, setStage, loading, loadingMessage, 
+    historyItems, idea, setIdea, questions, answers, setAnswers, 
+    blueprint, masterPrompt, htmlMockup, ideaSpec, conversation, 
+    chatHistory, refinementInput, setRefinementInput, blueprintTab, setBlueprintTab, 
+    selectedPersona, setSelectedPersona, publicBlueprintId, initializing 
+  } = projectState;
   
-  // History State
-  const [historyItems, setHistoryItems] = useState([]);
-  const [currentDbId, setCurrentDbId] = useState(null);
+  const {
+      loadHistory, handleLoadSession, handleDeleteSession, handleGenerateQuestions, 
+      handleGenerateBlueprint, handleRefineBlueprint, handleGenerateMockup, handleViewChange
+  } = projectActions;
   
   // Security & Onboarding State
   const [isOnboarding, setIsOnboarding] = useState(!localStorage.getItem('onboarding_complete'));
@@ -43,46 +50,6 @@ function App() {
   const [sessionUnlocked, setSessionUnlocked] = useState(false);
   // eslint-disable-next-line no-unused-vars
   const [activePin, setActivePin] = useState(null); 
-  
-  // Data State
-  const [idea, setIdea] = useState('');
-  const [questions, setQuestions] = useState([]);
-  const [answers, setAnswers] = useState({});
-  const [blueprint, setBlueprint] = useState('');
-  const [masterPrompt, setMasterPrompt] = useState('');
-  const [htmlMockup, setHtmlMockup] = useState('');
-  
-  // Interaction State
-  const [conversation, setConversation] = useState([]);
-  const [chatHistory, setChatHistory] = useState([]); 
-  const [refinementInput, setRefinementInput] = useState('');
-  const [blueprintTab, setBlueprintTab] = useState('preview');
-  const [selectedPersona, setSelectedPersona] = useState('balanced');
-  const [publicBlueprintId, setPublicBlueprintId] = useState(null);
-
-  // Currently selected provider
-  // const [provider, setProvider] = useState(llm.getDefaultProvider()); // Unused state, fetching dynamically
-
-  // Mobile Menu State
-
-
-  // Initializing state for the app
-  const [initializing, setInitializing] = useState(true);
-
-  // Check for public share URL on mount
-  useEffect(() => {
-    const path = window.location.pathname;
-    // Format: /public/:id
-    if (path.startsWith('/public/')) {
-        const id = path.split('/public/')[1];
-        if (id) {
-            setPublicBlueprintId(id);
-            setInitializing(false); // If public blueprint, no need for other checks
-            return;
-        }
-    }
-    setInitializing(false); // If not public blueprint, proceed with normal initialization
-  }, []);
 
   // DB Checks and PIN Lock
   useEffect(() => {
@@ -126,7 +93,7 @@ function App() {
     } else {
         setCheckingLock(false);
     }
-  }, [isOnboarding, publicBlueprintId, sessionUnlocked]);
+  }, [isOnboarding, publicBlueprintId, sessionUnlocked, loadHistory]);
 
   const handleUnlock = async (pin) => {
     // Verify PIN against localStorage
@@ -155,6 +122,8 @@ function App() {
     // Mark session as unlocked to prevent re-locking
     setSessionUnlocked(true);
     setIsLocked(false);
+    
+    loadHistory();
   };
   
   const handleOnboardingComplete = () => {
@@ -170,325 +139,6 @@ function App() {
   const handleLogin = (token) => {
     localStorage.setItem('auth_token', token);
     setIsAuthenticated(true);
-  };
-
-  const loadHistory = async () => {
-    const items = await getRecentConversations();
-    setHistoryItems(items);
-  };
-
-  const handleLoadSession = (item, goToBlueprint = false) => {
-    setIdea(item.idea);
-    setQuestions(item.questions || []);
-    setAnswers(item.answers || {});
-    setBlueprint(item.blueprint || '');
-    setMasterPrompt(item.masterPrompt || '');
-    setHtmlMockup(item.htmlMockup || '');
-    setChatHistory(item.chatHistory || []);
-    setConversation(item.chatHistory || []);
-    setCurrentDbId(item.id);
-    
-    // Set appropriate stage
-    if (goToBlueprint && item.blueprint) {
-      setStage('blueprint');
-    } else if (item.htmlMockup) {
-      setStage('mockup');
-    } else if (item.blueprint) {
-      setStage('blueprint');
-    } else if (item.questions && item.questions.length > 0) {
-      setStage('questions');
-    } else {
-      setStage('input');
-    }
-    
-    // Switch to input/project view
-    setActiveView('input');
-  };
-
-  const handleDeleteSession = async (id) => {
-    await deleteConversation(id);
-    loadHistory(); // Refresh list
-  };
-
-  // Save helper
-  const saveProgress = async (updates) => {
-    try {
-        const fullData = {
-            id: currentDbId,
-            idea,
-            questions,
-            answers,
-            blueprint,
-            htmlMockup,
-            masterPrompt,
-            chatHistory,
-            ...updates
-        };
-        const id = await saveConversation(fullData);
-        setCurrentDbId(id);
-
-        // Auto-sync to server if in server mode
-        const syncMode = localStorage.getItem('sync_mode');
-        const serverUrl = localStorage.getItem('server_url');
-        if (syncMode === 'server' && serverUrl) {
-           SyncService.push(serverUrl, { ...fullData, id }).catch(console.error);
-        }
-        
-        loadHistory(); // Refresh history list after save
-
-    } catch (e) {
-        console.error('Failed to auto-save:', e);
-    }
-  };
-
-  // Helper to ensure API key exists
-  const checkApiKey = (p) => {
-    const provider = p || llm.getDefaultProvider();
-    if (!llm.getApiKey(provider)) {
-      setActiveView('settings');
-      alert(`Please enter your ${provider} API key in Settings to continue.`);
-      return false;
-    }
-    return true;
-  };
-
-  const handleGenerateQuestions = async () => {
-    if (!checkApiKey()) return;
-    setLoading(true);
-    setLoadingMessage('Generating questions...');
-    try {
-      const { system, prompt } = PromptService.get('questions', { idea });
-      
-      // Apply persona modifier
-      const persona = PROMPT_PERSONAS.find(p => p.id === selectedPersona);
-      const enhancedSystem = persona ? `${system}\n\nSTYLE DIRECTIVE: ${persona.modifier}` : system;
-      
-      const currentProvider = llm.getDefaultProvider();
-      const model = llm.getModelForStage('questions');
-      const responseText = await llm.generate(currentProvider, {
-        system: enhancedSystem,
-        prompt,
-        model
-      });
-
-      // Parse JSON from response
-      const cleanText = responseText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      const parsed = JSON.parse(cleanText);
-      setQuestions(parsed);
-      setAnswers(parsed.reduce((acc, _, i) => ({ ...acc, [i]: '' }), {}));
-      
-      // Save
-      await saveProgress({ idea, questions: parsed });
-      
-      setStage('questions');
-    } catch (e) {
-      console.error(e);
-      alert(`Error: ${e.message}`);
-    } finally {
-      setLoading(false);
-      setLoadingMessage('');
-    }
-  };
-
-  const handleGenerateBlueprint = async () => {
-    if (!checkApiKey()) return;
-    
-    // Also check second pass provider if enabled
-    const settings = llm.getSettings();
-    if (settings.enableSecondPass && !llm.getApiKey(settings.secondPassProvider)) {
-      setActiveView('settings');
-      alert(`Second pass is enabled. Please enter your ${settings.secondPassProvider} API key in Settings.`);
-      return;
-    }
-    
-    setLoading(true);
-    setStage('generating');
-    
-    try {
-      // First pass
-      setLoadingMessage('Generating blueprint...');
-      const { system, prompt } = PromptService.get('blueprint', { idea, questions, answers });
-      
-      // Apply persona modifier
-      const persona = PROMPT_PERSONAS.find(p => p.id === selectedPersona);
-      const enhancedSystem = persona ? `${system}\n\nSTYLE DIRECTIVE: ${persona.modifier}` : system;
-      
-      const currentProvider = llm.getDefaultProvider();
-      const model = llm.getModelForStage('blueprint');
-      let responseText = await llm.generate(currentProvider, {
-        system: enhancedSystem,
-        prompt,
-        model,
-        maxTokens: 8000
-      });
-
-      // Second pass if enabled
-      if (settings.enableSecondPass) {
-        setLoadingMessage('Refining with second AI...');
-        const { system: sp2System, prompt: sp2Prompt } = PromptService.get('secondPass', { originalBlueprint: responseText });
-        responseText = await llm.generate(settings.secondPassProvider, {
-          system: sp2System,
-          prompt: sp2Prompt,
-          model: settings.secondPassModel,
-          maxTokens: 8000
-        });
-      }
-
-      const sections = responseText.split('## Master Takeoff Prompt');
-      setBlueprint(responseText);
-      setMasterPrompt(sections[1] ? sections[1].trim() : '');
-      setConversation([{
-        role: 'assistant', 
-        content: responseText, 
-        type: 'blueprint'
-      }]);
-
-      // Save
-      await saveProgress({ 
-         blueprint: responseText, 
-         masterPrompt: sections[1] ? sections[1].trim() : '',
-         answers 
-      });
-
-      setStage('blueprint');
-    } catch (e) {
-      alert(`Error: ${e.message}`);
-      setStage('questions');
-    } finally {
-      setLoading(false);
-      setLoadingMessage('');
-    }
-  };
-
-  const handleRefineBlueprint = async () => {
-    if (!refinementInput.trim()) return;
-    if (!checkApiKey()) return;
-    
-    const userMsg = { role: 'user', content: refinementInput };
-    setConversation(prev => [...prev, userMsg]);
-    setRefinementInput('');
-    setLoading(true);
-    setLoadingMessage('Refining blueprint...');
-
-    try {
-      const { system } = PromptService.get('refine', { refinementInput });
-      const prompt = `CURRENT BLUEPRINT:\n${blueprint}\n\nUSER REQUEST: ${refinementInput}`;
-      const model = llm.getModelForStage('refinement');
-
-      const currentProvider = llm.getDefaultProvider();
-      const responseText = await llm.generate(currentProvider, {
-          system, 
-          prompt,
-          model,
-          maxTokens: 8000,
-          history: chatHistory // Pass history for optimization
-      });
-      
-      const sections = responseText.split('## Master Takeoff Prompt');
-      setBlueprint(responseText);
-      setMasterPrompt(sections[1] ? sections[1].trim() : '');
-      
-      const assistantMsg = {
-        role: 'assistant',
-        content: responseText,
-        type: 'response',
-        timestamp: Date.now()
-      };
-      
-      setConversation(prev => [...prev, assistantMsg]);
-      
-      const newChatHistory = [...chatHistory, { ...userMsg, timestamp: Date.now() - 1000 }, assistantMsg];
-      setChatHistory(newChatHistory);
-
-      await saveProgress({ 
-         blueprint: responseText, 
-         masterPrompt: sections[1] ? sections[1].trim() : '',
-         chatHistory: newChatHistory
-      });
-
-    } catch (e) {
-      setConversation(prev => [...prev, { role: 'assistant', content: `Error: ${e.message}`, type: 'error' }]);
-    } finally {
-      setLoading(false);
-      setLoadingMessage('');
-    }
-  };
-
-  const handleGenerateMockup = async () => {
-    if (!checkApiKey()) return;
-    setLoading(true);
-    setLoadingMessage('Generating mockup...');
-    setStage('mockup');
-    try {
-      const { system, prompt } = PromptService.get('mockup', { blueprint });
-      const currentProvider = llm.getDefaultProvider();
-      const model = llm.getModelForStage('mockup');
-      let html = await llm.generate(currentProvider, { system, prompt, model, maxTokens: 8000 });
-      
-      html = html.replace(/```html\n?/g, '').replace(/```\n?/g, '').trim();
-      
-      if (!html.includes('id="markdown-content"')) {
-         const insertPoint = html.lastIndexOf('</body>');
-         if (insertPoint !== -1) {
-            const extra = `
-     <div style="display:none;"><pre id="markdown-content">${blueprint.replace(/</g, '&lt;')}</pre></div>
-            `;
-            html = html.slice(0, insertPoint) + extra + html.slice(insertPoint);
-         }
-      }
-
-      setHtmlMockup(html);
-      await saveProgress({ htmlMockup: html });
-
-    } catch (e) {
-      alert(`Error: ${e.message}`);
-      setStage('blueprint');
-    } finally {
-      setLoading(false);
-      setLoadingMessage('');
-    }
-  };
-
-  const downloadFile = (content, name, type) => {
-    const blob = new Blob([content], { type });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = name;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
-  const isSecondPassEnabled = llm.isSecondPassEnabled();
-
-  // Handle new project creation from Sidebar
-  const handleViewChange = (view) => {
-      // If we are already on input and click input again, maybe reset?
-      if (view === 'input' && activeView !== 'input') {
-          // Switching back to project view, keep state
-      } else if (view === 'input' && activeView === 'input') {
-          // If already on input, asking to start new
-          if (confirm('Start a new project? Unsaved progress will be lost if not autosaved.')) {
-            setIdea('');
-            setQuestions([]);
-            setAnswers({});
-            setBlueprint('');
-            setHtmlMockup('');
-            setCurrentDbId(null);
-            setStage('input');
-          } else {
-              return; // Cancel switch
-          }
-      }
-      
-      // Always refresh history when entering history view
-      if (view === 'history') {
-          loadHistory();
-      }
-
-      setActiveView(view);
   };
 
   return (
@@ -548,7 +198,7 @@ function App() {
                <BottomNav activeView={activeView} onViewChange={handleViewChange} />
 
                {/* Main Content */}
-               <main className="flex-1 md:ml-64 ml-0 p-4 md:p-8 lg:p-12 overflow-y-auto relative pb-24 md:pb-12">
+               <main className="flex-1 md:ml-64 ml-0 p-4 pt-[max(1.5rem,env(safe-area-inset-top))] md:p-8 lg:p-12 overflow-y-auto relative pb-24 md:pb-12">
                    
                    {/* Header (Context sensitive) - Hidden on mobile when not needed */}
                    <div className="mb-2 md:mb-12 flex justify-between items-center">
@@ -647,6 +297,8 @@ function App() {
                                 currentTab={blueprintTab}
                                 setTab={setBlueprintTab}
                                 chatHistory={chatHistory}
+                                ideaSpec={ideaSpec}
+                                onSave={projectActions.saveProgress}
                                 />
                             </Suspense>
                         )}
@@ -664,6 +316,8 @@ function App() {
                                      downloadFile(blueprint, 'blueprint.md', 'text/markdown');
                                      setTimeout(() => downloadFile(htmlMockup, 'mockup.html', 'text/html'), 100);
                                  }}
+                                 ideaSpec={ideaSpec}
+                                 blueprint={blueprint}
                                  />
                              </Suspense>
                         )}

@@ -1,5 +1,6 @@
 import React from 'react';
-import { Download, Sparkles, Check, Copy } from 'lucide-react';
+import { Download, Sparkles, Check, Copy, Package, FileCode, FileText, Terminal } from 'lucide-react';
+import { ExportService } from '../services/ExportService';
 
 export default function MockupStage({ 
   masterPrompt, 
@@ -8,8 +9,33 @@ export default function MockupStage({
   onDownloadMarkdown,
   onDownloadHTML,
   onDownloadBoth,
-  loading 
+  loading,
+  ideaSpec,
+  blueprint
 }) {
+  const handleExportAll = () => {
+    if (ideaSpec) {
+      ExportService.exportAll(ideaSpec, blueprint);
+    }
+  };
+
+  const handleExportCursorRules = () => {
+    const content = ExportService.toCursorRules(ideaSpec);
+    ExportService.downloadFile('.cursorrules', content);
+  };
+
+  const handleExportPlan = () => {
+    const content = ExportService.toImplementationPlan(ideaSpec);
+    const name = (ideaSpec.meta?.name || 'project').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    ExportService.downloadFile(`${name}-implementation_plan.md`, content);
+  };
+
+  const handleExportPrompt = () => {
+    const content = ExportService.toPromptMd(ideaSpec, blueprint);
+    const name = (ideaSpec.meta?.name || 'project').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    ExportService.downloadFile(`${name}-prompt.md`, content);
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       {loading ? (
@@ -96,6 +122,53 @@ export default function MockupStage({
             </div>
           </div>
 
+          {/* v1.5 Export Flight Deck */}
+          {ideaSpec && (
+            <div className="bg-[#1A1A1A] border border-[#333] rounded-lg p-6 animate-fade-in">
+              <div className="flex items-center gap-2 mb-4 text-[#D4AF37]">
+                <Package className="w-5 h-5" />
+                <h3 className="text-lg font-serif">Export Flight Deck (v1.5)</h3>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <button 
+                  onClick={handleExportCursorRules}
+                  className="flex flex-col items-center justify-center p-4 bg-slate-800/50 border border-slate-700 rounded hover:bg-slate-800 hover:border-[#D4AF37] transition-all group"
+                >
+                  <Terminal className="w-6 h-6 text-slate-400 group-hover:text-[#D4AF37] mb-2" />
+                  <span className="text-sm font-mono text-slate-300">.cursorrules</span>
+                  <span className="text-xs text-slate-500 mt-1">Cursor AI Config</span>
+                </button>
+
+                <button 
+                  onClick={handleExportPlan}
+                  className="flex flex-col items-center justify-center p-4 bg-slate-800/50 border border-slate-700 rounded hover:bg-slate-800 hover:border-[#D4AF37] transition-all group"
+                >
+                  <FileText className="w-6 h-6 text-slate-400 group-hover:text-[#D4AF37] mb-2" />
+                  <span className="text-sm font-mono text-slate-300">implementation.md</span>
+                  <span className="text-xs text-slate-500 mt-1">Step-by-step Plan</span>
+                </button>
+
+                <button 
+                  onClick={handleExportPrompt}
+                  className="flex flex-col items-center justify-center p-4 bg-slate-800/50 border border-slate-700 rounded hover:bg-slate-800 hover:border-[#D4AF37] transition-all group"
+                >
+                  <FileCode className="w-6 h-6 text-slate-400 group-hover:text-[#D4AF37] mb-2" />
+                  <span className="text-sm font-mono text-slate-300">prompt.md</span>
+                  <span className="text-xs text-slate-500 mt-1">Full Context Dump</span>
+                </button>
+              </div>
+
+              <button
+                onClick={handleExportAll}
+                className="w-full bg-[#D4AF37] hover:bg-[#C5A028] text-black font-medium py-3 rounded transition-all flex items-center justify-center gap-2 font-mono"
+              >
+                <Download className="w-4 h-4" />
+                EXPORT ALL v1.5 FILES
+              </button>
+            </div>
+          )}
+
           <div className="flex gap-3">
             <button
               onClick={onStartOver}
@@ -105,10 +178,10 @@ export default function MockupStage({
             </button>
             <button
               onClick={onDownloadBoth}
-              className="flex-1 bg-amber-500 hover:bg-amber-600 text-slate-900 font-medium py-4 rounded-lg transition-all flex items-center justify-center gap-2 font-mono"
+              className="flex-1 bg-slate-800 hover:bg-slate-700 border border-amber-500/30 text-amber-400 font-medium py-4 rounded-lg transition-all flex items-center justify-center gap-2 font-mono"
             >
               <Download className="w-4 h-4" />
-              DOWNLOAD BOTH FILES
+              DOWNLOAD LEGACY FORMATS
             </button>
           </div>
         </>

@@ -1,5 +1,6 @@
 import React from 'react';
 import { PlusCircle, History, Settings, Terminal } from 'lucide-react';
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
 
 export default function BottomNav({ activeView, onViewChange }) {
   const menuItems = [
@@ -18,7 +19,10 @@ export default function BottomNav({ activeView, onViewChange }) {
           return (
             <button
               key={item.id}
-              onClick={() => onViewChange(item.id)}
+              onClick={async () => {
+                await Haptics.impact({ style: ImpactStyle.Light });
+                onViewChange(item.id);
+              }}
               className="flex flex-col items-center justify-center gap-1 relative group"
             >
               {/* Active Indicator Line */}

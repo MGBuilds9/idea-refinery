@@ -1,6 +1,8 @@
-import React, { useRef, useEffect } from 'react';
-import { FileText, MessageSquare, Check, Send, Sparkles } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Reorder } from 'framer-motion';
+import { FileText, MessageSquare, Check, Send, Sparkles, Globe, Copy, X, Layers } from 'lucide-react';
 import ContextIndicator from './ContextIndicator';
+import FeatureCard from './FeatureCard';
 
 export default function BlueprintStage({ 
   blueprint, 
@@ -11,11 +13,38 @@ export default function BlueprintStage({
   loading,
   refinementInput,
   setRefinementInput,
-  currentTab = 'preview', // 'preview' or 'chat'
+  currentTab = 'preview', // 'preview', 'chat', or 'features'
   setTab,
-  chatHistory = [] // For context optimization display
+  chatHistory = [],
+  ideaSpec,
+  onSave
 }) {
   const chatEndRef = useRef(null);
+  
+  // Local state for features to allow smooth dragging before save
+  const [localFeatures, setLocalFeatures] = useState([]);
+
+  useEffect(() => {
+    if (ideaSpec?.features) {
+       setLocalFeatures(ideaSpec.features);
+    }
+  }, [ideaSpec]);
+
+  const handleReorder = (newOrder) => {
+    setLocalFeatures(newOrder);
+    // Debounce save or save immediately? 
+    // For smooth UX, maybe save on drag end? 
+    // framer-motion Reorder calls onReorder creates a state update.
+    // We should propagate to parent efficiently.
+    if (onSave && ideaSpec) {
+        onSave({ 
+            ideaSpec: { 
+                ...ideaSpec, 
+                features: newOrder 
+            } 
+        });
+    }
+  };
 
   useEffect(() => {
     if (currentTab === 'chat') {
@@ -89,6 +118,13 @@ export default function BlueprintStage({
         {/* Tab Header */}
         <div className="flex border-b border-slate-700">
           <button
+            onClick={() => setTab('features')}
+            className={`flex-1 p-4 text-sm font-mono flex items-center justify-center gap-2 transition-colors ${currentTab === 'features' ? 'bg-slate-700/50 text-amber-400' : 'text-slate-400 hover:text-slate-200'}`}
+          >
+            <Layers className="w-4 h-4" />
+            FEATURES
+          </button>
+          <button
             onClick={() => setTab('preview')}
             className={`flex-1 p-4 text-sm font-mono flex items-center justify-center gap-2 transition-colors ${currentTab === 'preview' ? 'bg-slate-700/50 text-amber-400' : 'text-slate-400 hover:text-slate-200'}`}
           >
@@ -115,6 +151,29 @@ export default function BlueprintStage({
           </div>
         )}
         <div className="flex-1 overflow-hidden relative">
+          {currentTab === 'features' && (
+            <div className="h-full overflow-y-auto p-6 bg-slate-900/30">
+               {!localFeatures || localFeatures.length === 0 ? (
+                 <div className="text-center py-12 text-slate-500 font-mono">
+                    No structured features found. Try generating a new blueprint.
+                 </div>
+               ) : (
+                 <div className="max-w-3xl mx-auto space-y-4">
+                    <p className="text-xs text-slate-400 font-mono mb-4 text-center">
+                        DRAG CARDS TO REPRIORITIZE FEATURES
+                    </p>
+                    <Reorder.Group axis="y" values={localFeatures} onReorder={handleReorder} className="space-y-3">
+                        {localFeatures.map((feature, idx) => (
+                            <Reorder.Item key={feature.id || idx} value={feature}>
+                                <FeatureCard feature={feature} />
+                            </Reorder.Item>
+                        ))}
+                    </Reorder.Group>
+                 </div>
+               )}
+            </div>
+          )}
+
           {currentTab === 'preview' && (
             <div className="h-full overflow-y-auto p-6 bg-slate-900/30">
               <pre className="whitespace-pre-wrap text-xs text-slate-300 font-mono">

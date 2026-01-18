@@ -9,5 +9,16 @@
   "server": {
     "cleartext": true,
     "androidScheme": "http"
+  },
+  "plugins": {
+    "StatusBar": {
+      "style": "DARK",
+      "overlaysWebView": true
+    },
+    "Keyboard": {
+      "resize": "body",
+      "style": "DARK",
+      "resizeOnFullScreen": true
+    }
   }
 }
