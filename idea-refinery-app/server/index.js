@@ -61,6 +61,8 @@ app.use(cors({
   },
   credentials: true
 }));
+app.set('trust proxy', 1); // Trust first key-value pair in X-Forwarded-For
+
 app.use(express.json({ limit: '50mb' }));
 
 // Serve static files from the dist directory
