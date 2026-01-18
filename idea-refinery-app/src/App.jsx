@@ -22,11 +22,10 @@ import { cleanupOldConversations, getSetting, pullItems } from './services/db';
 import { PromptService } from './services/PromptService';
 import { useProjectState } from './hooks/useProjectState';
 
-// Feature flag or derived state
-const isSecondPassEnabled = false; 
-
-
 function App() {
+  // Feature flag or derived state
+  const isSecondPassEnabled = false;
+
   const { state: projectState, actions: projectActions } = useProjectState();
   const { 
     activeView, stage, setStage, loading, loadingMessage, 
