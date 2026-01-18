@@ -31,7 +31,7 @@ export default function InputStage({ idea, setIdea, onNext, selectedPersona, set
       </div>
 
       {/* 3. Input Box - Flex Grow to take remaining space but centered */}
-      <div className="flex-1 w-full flex flex-col items-center justify-start md:justify-center max-w-2xl px-4 pb-20">
+      <div className="flex-1 w-full flex flex-col items-center justify-start max-w-2xl px-4 pb-20 pt-8 md:pt-12">
         <div
           className={`w-full transition-all duration-700 ${isFocused ? 'scale-105' : 'scale-100'}`}
         >

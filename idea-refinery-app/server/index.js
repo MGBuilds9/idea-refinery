@@ -16,13 +16,13 @@ const DEFAULT_PROMPTS = {
     prompt: "I have a project idea: \"${idea}\"\n\nGenerate 3-5 thoughtful, specific questions that would help refine this idea and uncover important requirements, technical considerations, and feature needs. \n\nReturn ONLY a JSON array of strings (the questions), nothing else. Format: [\"question 1\", \"question 2\", ...]"
   }),
   blueprint: JSON.stringify({
-      system: "You are an expert software architect and product strategist.",
-      prompt: "Based on this project idea and answers, create a comprehensive technical blueprint in markdown format.\n\nPROJECT IDEA: \"${idea}\"\n\nCLARIFYING Q&A:\n${qaPairs}\n\nCRITICAL TECH STACK GUIDELINES:\n- Recommend MODERN, SIMPLE solutions that get users up and running quickly\n- Prefer: Next.js, Vite + React, Supabase, Resend, n8n, Tailwind CSS, shadcn/ui\n- Avoid over-engineering - choose the simplest viable approach\n- Focus on aesthetic, eye-catching design with minimal complexity\n- This is for \"vibe-coders\" and non-traditional developers\n\nGenerate a complete markdown blueprint with these sections:\n# Project Blueprint: [Project Name]\n\n## Overview\nBrief description and purpose\n\n## Core Features\nComprehensive list of all necessary features\n\n## Recommended Tech Stack\nModern, simple technologies optimized for rapid development\n\n## Architecture\nHigh-level system architecture (keep simple)\n\n## Data Models\nKey entities and relationships\n\n## User Flow\nPrimary user journeys\n\n## Implementation Phases\nSuggested development phases\n\n## Design Principles\nAesthetic and UX considerations\n\n## Considerations\nTechnical constraints, security, performance, scalability\n\n---\n\n## Master Takeoff Prompt\n\n[Generate a comprehensive, ready-to-use prompt that can be pasted directly into Cursor, Lovable, Bolt, Replit, or similar AI coding tools. This should include:\n- Complete project context\n- Tech stack specifications\n- Core features to implement\n- Design requirements\n- File structure suggestions\n- Any specific implementation details\nMake it detailed enough that an AI agent can start building immediately.]\n\nBe specific, thorough, and technical. This should serve as a complete development blueprint."
-    }),
-    refine: JSON.stringify({
-      system: "You are helping refine a project blueprint for \"vibe-coders\" and non-traditional developers. The user may ask for changes, additions, clarifications, or complete rewrites. \n\nALWAYS respond with the updated COMPLETE blueprint in markdown format, incorporating their feedback.\n\nCRITICAL TECH STACK PRINCIPLES:\n- Recommend MODERN, SIMPLE solutions (Next.js, Vite + React, Supabase, Resend, n8n, Tailwind, shadcn/ui)\n- Avoid over-engineering - simplest viable approach wins\n- Focus on aesthetic, eye-catching design\n- Optimize for rapid development and deployment\n\nThe blueprint must end with a \"## Master Takeoff Prompt\" section that's ready to paste into Cursor, Lovable, Bolt, or Replit. Be thorough and technical."
-    }),
-    mockup: JSON.stringify({
+    system: "You are an expert software architect and product strategist.",
+    prompt: "Based on this project idea and answers, create a comprehensive technical blueprint in markdown format.\n\nPROJECT IDEA: \"${idea}\"\n\nCLARIFYING Q&A:\n${qaPairs}\n\nCRITICAL TECH STACK GUIDELINES:\n- Recommend MODERN, SIMPLE solutions that get users up and running quickly\n- Prefer: Next.js, Vite + React, Supabase, Resend, n8n, Tailwind CSS, shadcn/ui\n- Avoid over-engineering - choose the simplest viable approach\n- Focus on aesthetic, eye-catching design with minimal complexity\n- This is for \"vibe-coders\" and non-traditional developers\n\nGenerate a complete markdown blueprint with these sections:\n# Project Blueprint: [Project Name]\n\n## Overview\nBrief description and purpose\n\n## Core Features\nComprehensive list of all necessary features\n\n## Recommended Tech Stack\nModern, simple technologies optimized for rapid development\n\n## Architecture\nHigh-level system architecture (keep simple)\n\n## Data Models\nKey entities and relationships\n\n## User Flow\nPrimary user journeys\n\n## Implementation Phases\nSuggested development phases\n\n## Design Principles\nAesthetic and UX considerations\n\n## Considerations\nTechnical constraints, security, performance, scalability\n\n---\n\n## Master Takeoff Prompt\n\n[Generate a comprehensive, ready-to-use prompt that can be pasted directly into Cursor, Lovable, Bolt, Replit, or similar AI coding tools. This should include:\n- Complete project context\n- Tech stack specifications\n- Core features to implement\n- Design requirements\n- File structure suggestions\n- Any specific implementation details\nMake it detailed enough that an AI agent can start building immediately.]\n\nBe specific, thorough, and technical. This should serve as a complete development blueprint."
+  }),
+  refine: JSON.stringify({
+    system: "You are helping refine a project blueprint for \"vibe-coders\" and non-traditional developers. The user may ask for changes, additions, clarifications, or complete rewrites. \n\nALWAYS respond with the updated COMPLETE blueprint in markdown format, incorporating their feedback.\n\nCRITICAL TECH STACK PRINCIPLES:\n- Recommend MODERN, SIMPLE solutions (Next.js, Vite + React, Supabase, Resend, n8n, Tailwind, shadcn/ui)\n- Avoid over-engineering - simplest viable approach wins\n- Focus on aesthetic, eye-catching design\n- Optimize for rapid development and deployment\n\nThe blueprint must end with a \"## Master Takeoff Prompt\" section that's ready to paste into Cursor, Lovable, Bolt, or Replit. Be thorough and technical."
+  }),
+  mockup: JSON.stringify({
     system: "You are an expert UI/UX designer and frontend developer specializing in data visualization and app showcases.",
     prompt: "Based on this project blueprint, create a complete, standalone HTML file that VISUALIZES the concept.\n\nBLUEPRINT:\n${blueprint}\n\nAnalyze the blueprint to determine if this is primarily a \"User Interface (App/Website)\" or a \"Process/Workflow\".\n\nIF IT IS AN APP OR WEBSITE:\n- Create a visual mockup of the interface displayed with a \"Perspective Design\" style.\n- Frame the main interface in a stylized window or device container that has a subtle 3D tilt/perspective effect (using CSS transform: perspective/rotate3d) to make it look like a high-end showcase.\n- The design should look like it's \"floating\" in 3D space.\n- Ensure the UI itself is within this transformed container.\n- It should look \"premium\" and modern, verifying the \"vibe\" of the idea.\n\nIF IT IS A WORKFLOW, SYSTEM, OR AUTOMATION:\n- Create a \"Line Tree Diagram\" or flowchart visualization.\n- Use SVGs or CSS to draw nodes and connecting lines representing the steps/logic of the workflow.\n- Make it interactive (hover effects on nodes.\n- It should clearly visualize the logic flow, branching, and outputs.\n\nGENERAL REQUIREMENTS:\n- Single HTML file with embedded CSS and JavaScript.\n- Beautiful, MODERN, eye-catching design.\n- Showcase 3-5 signature features.\n- Include the project goal/mission.\n- Focus on SIMPLICITY and AESTHETICS.\n- Use Google Fonts.\n- Dark mode preference unless otherwise specified.\n- Clean, minimal code.\n\nIMPORTANT: At the bottom of the HTML, include a hidden section with the full markdown blueprint embedded in a <pre> tag with id=\"markdown-content\". Add a \"Copy Blueprint\" button that copies this markdown to clipboard. Style it minimally.\n\nReturn ONLY the complete HTML code, nothing else."
   })
@@ -56,19 +56,19 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // CORS configuration for web and iOS
-const allowedOrigins = process.env.ALLOWED_ORIGINS 
-  ? process.env.ALLOWED_ORIGINS.split(',') 
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',')
   : ['https://ideas.mkgbuilds.com', 'capacitor://localhost', 'http://localhost', 'http://localhost:5173'];
 
 app.use(cors({
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
-    
+
     // Check if origin is allowed
-    const isAllowed = allowedOrigins.indexOf(origin) !== -1 || 
-        allowedOrigins.some(allowed => origin.startsWith(allowed)) ||
-        /^https?:\/\/(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|localhost)/.test(origin); // Allow local IPs and localhost
+    const isAllowed = allowedOrigins.indexOf(origin) !== -1 ||
+      allowedOrigins.some(allowed => origin.startsWith(allowed)) ||
+      /^https?:\/\/(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|localhost)/.test(origin); // Allow local IPs and localhost
 
     if (isAllowed) {
       callback(null, true);
@@ -190,33 +190,33 @@ app.post('/api/auth/login', async (req, res) => {
 // User Registration (Open)
 app.post('/api/auth/register', async (req, res) => {
   const { username, password } = req.body;
-  
+
   // Validate input
   if (!username || username.length < 3) {
     return res.status(400).json({ error: 'Username must be at least 3 characters' });
   }
-  
+
   if (!password || password.length < 6) {
     return res.status(400).json({ error: 'Password must be at least 6 characters' });
   }
-  
+
   try {
     // Check for existing user
     const existing = await pool.query('SELECT id FROM users WHERE username = $1', [username]);
     if (existing.rows.length > 0) {
       return res.status(409).json({ error: 'Username already exists' });
     }
-    
+
     // Create user
     const hashedPassword = await bcrypt.hash(password, 10);
     const result = await pool.query(
       'INSERT INTO users (username, password_hash) VALUES ($1, $2) RETURNING id, username',
       [username, hashedPassword]
     );
-    
+
     const user = result.rows[0];
     const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '24h' });
-    
+
     console.log(`✅ New user registered: ${username}`);
     res.json({ token, userId: user.id });
   } catch (e) {
@@ -251,7 +251,7 @@ app.post('/api/sync/push', authenticateToken, async (req, res) => {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
-      
+
       const results = [];
       for (const item of items) {
         // Upsert logic for each item
@@ -259,7 +259,7 @@ app.post('/api/sync/push', authenticateToken, async (req, res) => {
         // If conflict on id, update if incoming version > current version? 
         // For simplicity in v1.1 "Last Write Wins": Update always on conflict for now.
         // But strictly we should check timestamps. Use the server timestamp for updated_at.
-        
+
         const query = `
           INSERT INTO items (id, user_id, type, content, version, deleted, updated_at)
           VALUES ($1, $2, $3, $4, $5, $6, NOW())
@@ -271,16 +271,16 @@ app.post('/api/sync/push', authenticateToken, async (req, res) => {
             updated_at = NOW()
           RETURNING id, updated_at
         `;
-        
+
         const values = [
-          item.id, 
-          userId, 
-          item.type, 
-          item.content, 
-          item.version, 
+          item.id,
+          userId,
+          item.type,
+          item.content,
+          item.version,
           item.deleted || false
         ];
-        
+
         const res = await client.query(query, values);
         results.push(res.rows[0]);
       }
@@ -318,7 +318,7 @@ app.get('/api/sync/pull', authenticateToken, async (req, res) => {
     // Or make a separate endpoint. Let's send them if since=0 (first sync)
     // Or just let the client request them separately.
     // For now, let's keep it simple and add a separate endpoint for prompts to avoid payload bloat.
-    
+
     res.json({
       items: result.rows,
       timestamp: new Date().toISOString()
@@ -333,7 +333,24 @@ app.get('/api/sync/pull', authenticateToken, async (req, res) => {
 app.get('/api/prompts', authenticateToken, async (req, res) => {
   try {
     const result = await pool.query('SELECT type, content, updated_at FROM prompt_overrides');
-    res.json(result.rows);
+    const overrides = {};
+    result.rows.forEach(row => {
+      overrides[row.type] = row;
+    });
+
+    // Merge defaults with overrides
+    const prompts = Object.keys(DEFAULT_PROMPTS).map(type => {
+      if (overrides[type]) {
+        return overrides[type];
+      }
+      return {
+        type,
+        content: DEFAULT_PROMPTS[type],
+        updated_at: new Date()
+      };
+    });
+
+    res.json(prompts);
   } catch (e) {
     console.error('Prompts fetch error:', e);
     res.status(500).json({ error: 'Failed to fetch prompts' });
@@ -342,7 +359,7 @@ app.get('/api/prompts', authenticateToken, async (req, res) => {
 
 app.post('/api/prompts', authenticateToken, async (req, res) => {
   const { type, content } = req.body;
-  
+
   if (!type || !content) {
     return res.status(400).json({ error: 'Type and content required' });
   }
@@ -374,9 +391,9 @@ app.post('/api/prompts/reset', authenticateToken, async (req, res) => {
     // Actually, if we delete the row, we need a way to fall back.
     // The requirement says "preloaded into the database".
     // So "Reset" means "Update DB row back to original default string".
-    
+
     if (DEFAULT_PROMPTS[type]) {
-       const result = await pool.query(
+      const result = await pool.query(
         `UPDATE prompt_overrides SET content = $1, updated_at = NOW() WHERE type = $2 RETURNING *`,
         [DEFAULT_PROMPTS[type], type]
       );
@@ -385,8 +402,8 @@ app.post('/api/prompts/reset', authenticateToken, async (req, res) => {
       res.status(400).json({ error: 'Unknown prompt type' });
     }
   } catch (e) {
-     console.error('Prompts reset error:', e);
-     res.status(500).json({ error: 'Failed to reset prompt' });
+    console.error('Prompts reset error:', e);
+    res.status(500).json({ error: 'Failed to reset prompt' });
   }
 });
 
@@ -394,13 +411,13 @@ app.post('/api/prompts/reset', authenticateToken, async (req, res) => {
 // Email Endpoint (Resend)
 app.post('/api/email/send', authenticateToken, async (req, res) => {
   const { to, subject, html, apiKey } = req.body; // Allow passing key from client (since we store it in Settings)
-  
+
   // If user doesn't provide key, maybe fallback to env?
   const resendKey = apiKey || process.env.RESEND_API_KEY;
 
   if (!resendKey) {
-    return res.status(400).json({ 
-      error: 'Resend API Key required. Please add it in Settings.' 
+    return res.status(400).json({
+      error: 'Resend API Key required. Please add it in Settings.'
     });
   }
 
@@ -426,8 +443,8 @@ app.post('/api/email/send', authenticateToken, async (req, res) => {
 // For now, note that existing routes are below. We can inject the middleware there.
 // Or we can just apply it globally for /api and exclude login.
 app.use('/api', (req, res, next) => {
-    if (req.path === '/auth/login' || req.path === '/auth/register' || req.path === '/health') return next();
-    authenticateToken(req, res, next);
+  if (req.path === '/auth/login' || req.path === '/auth/register' || req.path === '/health') return next();
+  authenticateToken(req, res, next);
 });
 
 // Anthropic Proxy
@@ -449,11 +466,11 @@ app.post('/api/anthropic', async (req, res) => {
     });
 
     const data = await response.json();
-    
+
     if (!response.ok) {
       return res.status(response.status).json(data);
     }
-    
+
     res.json(data);
   } catch (error) {
     console.error('Anthropic proxy error:', error);
@@ -479,11 +496,11 @@ app.post('/api/openai', async (req, res) => {
     });
 
     const data = await response.json();
-    
+
     if (!response.ok) {
       return res.status(response.status).json(data);
     }
-    
+
     res.json(data);
   } catch (error) {
     console.error('OpenAI proxy error:', error);
@@ -494,7 +511,7 @@ app.post('/api/openai', async (req, res) => {
 // Gemini Proxy
 app.post('/api/gemini', async (req, res) => {
   const { model, apiKey, ...body } = req.body;
-  
+
   if (!apiKey) {
     return res.status(400).json({ error: 'API key required' });
   }
@@ -512,11 +529,11 @@ app.post('/api/gemini', async (req, res) => {
     });
 
     const data = await response.json();
-    
+
     if (!response.ok) {
       return res.status(response.status).json(data);
     }
-    
+
     res.json(data);
   } catch (error) {
     console.error('Gemini proxy error:', error);
@@ -536,8 +553,8 @@ app.post('/api/public/publish', authenticateToken, async (req, res) => {
   }
 
   try {
-    const expiresAt = expiresInDays 
-      ? new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000) 
+    const expiresAt = expiresInDays
+      ? new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000)
       : null;
 
     const result = await pool.query(
@@ -550,8 +567,8 @@ app.post('/api/public/publish', authenticateToken, async (req, res) => {
     const blueprint = result.rows[0];
     const publicUrl = `/public/${blueprint.id}`;
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       id: blueprint.id,
       url: publicUrl,
       expiresAt: blueprint.expires_at
@@ -653,7 +670,7 @@ app.get('*', (req, res) => {
     console.warn(`⚠️  404 - Asset/API not found: ${req.path}`);
     return res.status(404).send('Not Found');
   }
-  
+
   const indexPath = path.resolve(distPath, 'index.html');
   if (fs.existsSync(indexPath)) {
     console.log(`📄 Serving index.html for route: ${req.path}`);
