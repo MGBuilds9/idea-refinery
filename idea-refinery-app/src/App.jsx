@@ -238,15 +238,7 @@ function App() {
                   <div className="max-w-4xl mx-auto">
 
                     {/* Logo on new project screen only */}
-                    {stage === 'input' && (
-                      <div className="flex flex-col items-center gap-4 md:gap-6 mb-6 md:mb-12 animate-fade-in">
-                        <img
-                          src="/idea-refinery-logo.svg"
-                          alt="Idea Refinery Logo"
-                          className="w-48 h-48 md:w-80 md:h-80 object-contain drop-shadow-[0_0_50px_rgba(212,175,55,0.5)]"
-                        />
-                      </div>
-                    )}
+
 
                     {stage === 'input' && (
                       <InputStage

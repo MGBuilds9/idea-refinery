@@ -220,8 +220,8 @@ export default function SettingsView() {
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`snap-start whitespace-nowrap md:w-full flex items-center gap-2 md:gap-3 px-4 py-2 md:py-3 rounded-full md:rounded-lg transition-all duration-300 font-mono text-sm md:text-left relative overflow-hidden shrink-0 border ${activeTab === tab.id
-                  ? 'bg-[var(--color-gold-subtle)] text-[var(--color-gold-primary)] border-[var(--color-gold-primary)] md:border-[var(--color-gold-subtle)]'
-                  : 'bg-white/5 md:bg-transparent text-zinc-500 hover:text-zinc-300 hover:bg-white/10 border-transparent'
+                ? 'bg-[var(--color-gold-subtle)] text-[var(--color-gold-primary)] border-[var(--color-gold-primary)] md:border-[var(--color-gold-subtle)]'
+                : 'bg-white/5 md:bg-transparent text-zinc-500 hover:text-zinc-300 hover:bg-white/10 border-transparent'
                 }`}
             >
               <div className={`hidden md:block absolute left-0 top-0 bottom-0 w-0.5 transition-colors ${activeTab === tab.id ? 'bg-[var(--color-gold-primary)]' : 'bg-transparent'}`} />
@@ -345,10 +345,10 @@ export default function SettingsView() {
                 </div>
                 <button
                   onClick={() => setEnableSecondPass(!enableSecondPass)}
-                  className={`relative w-14 h-7 rounded-full transition-colors ${enableSecondPass ? 'bg-[#D4AF37]' : 'bg-[#333]'
+                  className={`relative w-12 h-6 rounded-full transition-colors duration-300 focus:outline-none ${enableSecondPass ? 'bg-[#D4AF37]' : 'bg-[#333]'
                     }`}
                 >
-                  <span className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-transform ${enableSecondPass ? 'translate-x-8' : 'translate-x-1'
+                  <span className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform duration-300 ${enableSecondPass ? 'translate-x-7' : 'translate-x-1'
                     }`} />
                 </button>
               </div>
@@ -594,8 +594,8 @@ export default function SettingsView() {
             <div className="space-y-6 animate-fade-in">
               {/* Sync Mode Status */}
               <div className={`p-6 rounded-xl border ${localStorage.getItem('sync_mode') === 'server'
-                  ? 'bg-emerald-900/10 border-emerald-500/20'
-                  : 'bg-amber-900/10 border-amber-500/20'
+                ? 'bg-emerald-900/10 border-emerald-500/20'
+                : 'bg-amber-900/10 border-amber-500/20'
                 }`}>
                 <div className="flex items-center gap-3 mb-3">
                   {localStorage.getItem('sync_mode') === 'server' ? (
