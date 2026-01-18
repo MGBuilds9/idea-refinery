@@ -236,38 +236,35 @@ app.post('/api/sync/push', authenticateToken, async (req, res) => {
     try {
       await client.query('BEGIN');
 
-      const results = [];
-      for (const item of items) {
-        // Upsert logic for each item
-        // content, type, version, deleted, id (uuid)
-        // If conflict on id, update if incoming version > current version? 
-        // For simplicity in v1.1 "Last Write Wins": Update always on conflict for now.
-        // But strictly we should check timestamps. Use the server timestamp for updated_at.
-
-        const query = `
-          INSERT INTO items (id, user_id, type, content, version, deleted, updated_at)
-          VALUES ($1, $2, $3, $4, $5, $6, NOW())
-          ON CONFLICT (user_id, id) DO UPDATE SET
-            type = EXCLUDED.type,
-            content = EXCLUDED.content,
-            version = EXCLUDED.version,
-            deleted = EXCLUDED.deleted,
-            updated_at = NOW()
-          RETURNING id, updated_at
-        `;
-
-        const values = [
-          item.id,
-          userId,
-          item.type,
-          item.content,
-          item.version,
-          item.deleted || false
-        ];
-
-        const res = await client.query(query, values);
-        results.push(res.rows[0]);
+      // Batch Upsert Optimization
+      if (items.length === 0) {
+        await client.query('COMMIT');
+        return res.json({ success: true, synced: 0 });
       }
+
+      const ids = items.map(i => i.id);
+      const types = items.map(i => i.type);
+      // Stringify content (JSONB) to pass as text[] then cast to jsonb in query
+      const contents = items.map(i => JSON.stringify(i.content));
+      const versions = items.map(i => i.version);
+      const deleteds = items.map(i => i.deleted || false);
+
+      const query = `
+        INSERT INTO items (id, user_id, type, content, version, deleted, updated_at)
+        SELECT id, $2, type, content::jsonb, version, deleted, NOW()
+        FROM UNNEST($1::uuid[], $3::text[], $4::text[], $5::int[], $6::boolean[])
+        AS t(id, type, content, version, deleted)
+        ON CONFLICT (user_id, id) DO UPDATE SET
+          type = EXCLUDED.type,
+          content = EXCLUDED.content,
+          version = EXCLUDED.version,
+          deleted = EXCLUDED.deleted,
+          updated_at = NOW()
+        RETURNING id, updated_at
+      `;
+
+      const res = await client.query(query, [ids, userId, types, contents, versions, deleteds]);
+      const results = res.rows;
 
       await client.query('COMMIT');
       res.json({ success: true, synced: results.length });
