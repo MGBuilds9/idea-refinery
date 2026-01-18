@@ -4,17 +4,20 @@ FROM node:20-alpine
 # Set working directory
 WORKDIR /app
 
-# Copy package files
+# Copy root package files
 COPY package*.json ./
 
-# Install dependencies
+# Install root dependencies
 RUN npm install
 
-# Copy source code
-COPY . .
+# Copy server package files
+COPY server/package*.json ./server/
 
 # Install server dependencies
 RUN cd server && npm install
+
+# Copy source code
+COPY . .
 
 # Build the frontend
 RUN npm run build

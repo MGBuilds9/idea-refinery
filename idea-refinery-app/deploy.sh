@@ -15,19 +15,42 @@ if [ ! -f .env ]; then
     exit 1
 fi
 
-# Check if docker-compose is available
-if ! command -v docker-compose &> /dev/null; then
-    echo "❌ docker-compose not found. Please install Docker Compose."
+# Function to find the correct docker-compose command
+find_docker_compose() {
+    if docker compose version &> /dev/null; then
+        echo "docker compose"
+    elif command -v docker-compose &> /dev/null; then
+        echo "docker-compose"
+    else
+        return 1
+    fi
+}
+
+# Find docker-compose command
+DOCKER_COMPOSE_CMD=$(find_docker_compose)
+
+if [ -z "$DOCKER_COMPOSE_CMD" ]; then
+    echo "❌ Neither 'docker compose' nor 'docker-compose' found. Please install Docker Compose."
     exit 1
+fi
+
+echo "Using command: $DOCKER_COMPOSE_CMD"
+
+# Auto-backup before deployment
+if [ -f ./backup.sh ]; then
+    echo "💾 Creating automatic backup..."
+    ./backup.sh
+else
+    echo "⚠️  backup.sh not found, skipping backup."
 fi
 
 # Stop existing containers
 echo "🛑 Stopping existing containers..."
-docker-compose down
+$DOCKER_COMPOSE_CMD down
 
 # Build and start
 echo "🏗️  Building and starting containers..."
-docker-compose up -d --build
+$DOCKER_COMPOSE_CMD up -d --build
 
 # Wait for services to be healthy
 echo "⏳ Waiting for services to be healthy..."
@@ -35,12 +58,12 @@ sleep 5
 
 # Check container status
 echo "📊 Container status:"
-docker-compose ps
+$DOCKER_COMPOSE_CMD ps
 
 # Show logs
 echo ""
 echo "📝 Recent logs:"
-docker-compose logs --tail=20
+$DOCKER_COMPOSE_CMD logs --tail=20
 
 echo ""
 echo "✅ Deployment complete!"
