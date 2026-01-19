@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { llm } from '../lib/llm';
 import { saveConversation, getRecentConversations, deleteConversation } from '../services/db';
 import { SyncService } from '../services/SyncService';
@@ -52,12 +52,12 @@ export function useProjectState() {
     setInitializing(false); // If not public blueprint, proceed with normal initialization
   }, []);
 
-  const loadHistory = async () => {
+  const loadHistory = useCallback(async () => {
     const items = await getRecentConversations();
     setHistoryItems(items);
-  };
+  }, []);
 
-  const handleLoadSession = (item, goToBlueprint = false) => {
+  const handleLoadSession = useCallback((item, goToBlueprint = false) => {
     setIdea(item.idea);
     setQuestions(item.questions || []);
     setAnswers(item.answers || {});
@@ -84,12 +84,12 @@ export function useProjectState() {
     
     // Switch to input/project view
     setActiveView('input');
-  };
+  }, []);
 
-  const handleDeleteSession = async (id) => {
+  const handleDeleteSession = useCallback(async (id) => {
     await deleteConversation(id);
     loadHistory(); // Refresh list
-  };
+  }, [loadHistory]);
 
   // Save helper
   const saveProgress = async (updates) => {
