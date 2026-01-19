@@ -60,6 +60,25 @@ npx cap open ios
 - **Deployment**: Docker + Docker  Compose
 - **Storage**: IndexedDB (local) + PostgreSQL (server sync)
 
+## Data Persistence & Backups
+
+Your data (accounts, refined prompts, blueprints) is safely stored in a Docker volume (`db_data`) which persists across container restarts and updates.
+
+### Automatic Backups
+The deployment script (`deploy.sh`) automatically creates a timestamped SQL backup in the `backups/` directory before every update.
+
+### Manual Backup
+You can manually backup your database at any time:
+```bash
+./backup.sh
+```
+
+### Restoration
+To restore from a previous backup (⚠️ Overwrites current data):
+```bash
+./restore.sh backups/db_backup_YYYYMMDD_HHMMSS.sql
+```
+
 ## Configuration
 
 Copy `.env.example` to `.env` and configure:

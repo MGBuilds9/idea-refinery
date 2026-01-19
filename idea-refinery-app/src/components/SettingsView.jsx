@@ -24,10 +24,10 @@ const getInitialSettings = () => {
 
 export default function SettingsView() {
   const [activeTab, setActiveTab] = useState('keys'); // keys, models, secondpass
-  
+
   // Initialize all state from stored settings
   const initialSettings = getInitialSettings();
-  
+
   // API Keys state
   const [keys, setKeys] = useState(initialSettings.keys);
   const [showKeys, setShowKeys] = useState({
@@ -50,13 +50,13 @@ export default function SettingsView() {
   const [confirmPin, setConfirmPin] = useState('');
   const [pinError, setPinError] = useState('');
   const [pinSuccess, setPinSuccess] = useState('');
-  
+
   // Server Auth state
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [passwordSuccess, setPasswordSuccess] = useState('');
-  
+
   // Feedback state
   const [saveStatus, setSaveStatus] = useState('');
 
@@ -72,28 +72,28 @@ export default function SettingsView() {
   const handleSave = async () => {
     setSaveStatus('Saving...');
     try {
-        await llm.setApiKeys({
-          anthropic: keys.anthropic,
-          openai: keys.openai,
-          gemini: keys.gemini
-        });
-    
-        llm.setDefaultProvider(provider);
-        
-        llm.updateSettings({
-          enableSecondPass,
-          secondPassProvider,
-          secondPassModel,
-          stageModels
-        });
-    
-        localStorage.setItem('server_url', serverUrl);
-        
-        setSaveStatus('Settings Saved!');
-        setTimeout(() => setSaveStatus(''), 2000);
+      await llm.setApiKeys({
+        anthropic: keys.anthropic,
+        openai: keys.openai,
+        gemini: keys.gemini
+      });
+
+      llm.setDefaultProvider(provider);
+
+      llm.updateSettings({
+        enableSecondPass,
+        secondPassProvider,
+        secondPassModel,
+        stageModels
+      });
+
+      localStorage.setItem('server_url', serverUrl);
+
+      setSaveStatus('Settings Saved!');
+      setTimeout(() => setSaveStatus(''), 2000);
     } catch (e) {
-        setSaveStatus('Error saving!');
-        console.error(e);
+      setSaveStatus('Error saving!');
+      console.error(e);
     }
   };
 
@@ -215,124 +215,123 @@ export default function SettingsView() {
       <div className="flex flex-col md:flex-row gap-6 md:gap-8 relative">
         {/* Sidebar Nav (Desktop) / Horizontal Tabs (Mobile) */}
         <div className="w-full md:w-56 flex md:flex-col overflow-x-auto pb-2 md:pb-0 gap-2 hide-scrollbar shrink-0 snap-x">
-            {tabs.map(tab => (
-                <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`snap-start whitespace-nowrap md:w-full flex items-center gap-2 md:gap-3 px-4 py-2 md:py-3 rounded-full md:rounded-lg transition-all duration-300 font-mono text-sm md:text-left relative overflow-hidden shrink-0 border ${
-                    activeTab === tab.id 
-                    ? 'bg-[var(--color-gold-subtle)] text-[var(--color-gold-primary)] border-[var(--color-gold-primary)] md:border-[var(--color-gold-subtle)]' 
-                    : 'bg-white/5 md:bg-transparent text-zinc-500 hover:text-zinc-300 hover:bg-white/10 border-transparent'
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`snap-start whitespace-nowrap md:w-full flex items-center gap-2 md:gap-3 px-4 py-2 md:py-3 rounded-full md:rounded-lg transition-all duration-300 font-mono text-sm md:text-left relative overflow-hidden shrink-0 border ${activeTab === tab.id
+                ? 'bg-[var(--color-gold-subtle)] text-[var(--color-gold-primary)] border-[var(--color-gold-primary)] md:border-[var(--color-gold-subtle)]'
+                : 'bg-white/5 md:bg-transparent text-zinc-500 hover:text-zinc-300 hover:bg-white/10 border-transparent'
                 }`}
-                >
-                <div className={`hidden md:block absolute left-0 top-0 bottom-0 w-0.5 transition-colors ${activeTab === tab.id ? 'bg-[var(--color-gold-primary)]' : 'bg-transparent'}`} />
-                <tab.icon className="w-4 h-4" />
-                {tab.label}
-                </button>
-            ))}
+            >
+              <div className={`hidden md:block absolute left-0 top-0 bottom-0 w-0.5 transition-colors ${activeTab === tab.id ? 'bg-[var(--color-gold-primary)]' : 'bg-transparent'}`} />
+              <tab.icon className="w-4 h-4" />
+              {tab.label}
+            </button>
+          ))}
         </div>
 
         {/* Content */}
         <div className="flex-1 glass-panel rounded-xl p-4 pt-4 md:p-8 md:pt-6 min-h-[400px] md:min-h-[500px] relative transition-all duration-300">
-            
-            {/* API Keys Tab */}
-            {activeTab === 'keys' && (
-                <div className="space-y-6 animate-fade-in">
-                <div>
-                    <label className="block text-xs uppercase text-[#D4AF37] mb-2 font-mono opacity-80">
-                    Default Provider
-                    </label>
-                    <div className="relative group">
-                        <select 
-                        value={provider}
-                        onChange={(e) => setProvider(e.target.value)}
-                        className="w-full bg-[#0A0A0A]/60 border border-[#D4AF37]/20 rounded-lg px-4 py-4 text-white focus:border-[#D4AF37]/60 focus:outline-none font-mono text-sm transition-all duration-300 input-glow appearance-none"
-                        >
-                        <option value="anthropic">Anthropic (Claude)</option>
-                        <option value="openai">OpenAI (GPT-4o)</option>
-                        <option value="gemini">Google Gemini</option>
-                        </select>
-                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[#D4AF37]/50">
-                            ▼
-                        </div>
-                    </div>
-                </div>
 
-                <div className="h-px bg-gradient-to-r from-transparent via-[#D4AF37]/20 to-transparent my-8" />
-
-                {['anthropic', 'openai', 'gemini'].map(p => (
-                    <div key={p}>
-                    <label className="block text-xs uppercase text-[#D4AF37] mb-2 font-mono opacity-80">
-                        {p} API Key
-                    </label>
-                    <div className="relative group">
-                        <input
-                        type={showKeys[p] ? "text" : "password"}
-                        value={keys[p]}
-                        onChange={(e) => setKeys({ ...keys, [p]: e.target.value })}
-                        placeholder={`sk-...`}
-                        className="w-full bg-[#0A0A0A]/60 border border-[#D4AF37]/20 rounded-lg px-4 py-4 pr-12 text-white focus:border-[#D4AF37]/60 focus:outline-none font-mono text-sm transition-all duration-300 input-glow"
-                        />
-                        <button
-                        onClick={() => toggleShow(p)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-gray-500 hover:text-[#D4AF37] transition-colors rounded-full hover:bg-[#D4AF37]/10"
-                        >
-                        {showKeys[p] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                    </div>
-                    </div>
-                ))}
+          {/* API Keys Tab */}
+          {activeTab === 'keys' && (
+            <div className="space-y-6 animate-fade-in">
+              <div>
+                <label className="block text-xs uppercase text-[#D4AF37] mb-2 font-mono opacity-80">
+                  Default Provider
+                </label>
+                <div className="relative group">
+                  <select
+                    value={provider}
+                    onChange={(e) => setProvider(e.target.value)}
+                    className="w-full bg-[#0A0A0A]/60 border border-[#D4AF37]/20 rounded-lg px-4 py-4 text-white focus:border-[#D4AF37]/60 focus:outline-none font-mono text-sm transition-all duration-300 input-glow appearance-none"
+                  >
+                    <option value="anthropic">Anthropic (Claude)</option>
+                    <option value="openai">OpenAI (GPT-4o)</option>
+                    <option value="gemini">Google Gemini</option>
+                  </select>
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[#D4AF37]/50">
+                    ▼
+                  </div>
                 </div>
-            )}
+              </div>
 
-            {/* Models Tab */}
-            {activeTab === 'models' && (
-                <div className="space-y-6 animate-fade-in">
-                <div className="bg-[#D4AF37]/5 border border-[#D4AF37]/20 p-4 rounded-xl mb-6">
-                    <p className="text-xs text-[#D4AF37] font-mono leading-relaxed">
-                    💎 Advanced: Override default models for specific stages in the pipeline.
-                    </p>
-                </div>
-                
-                {[
-                    { key: 'questions', label: 'Questions Generation' },
-                    { key: 'blueprint', label: 'Blueprint Generation' },
-                    { key: 'refinement', label: 'Blueprint Refinement' },
-                    { key: 'mockup', label: 'Mockup Generation' }
-                ].map(stage => (
-                    <div key={stage.key}>
-                    <label className="block text-xs uppercase text-[#D4AF37] mb-2 font-mono opacity-80">
-                        {stage.label}
-                    </label>
-                    <select
-                        value={stageModels[stage.key] || ''}
-                        onChange={(e) => setStageModels({ 
-                        ...stageModels, 
-                        [stage.key]: e.target.value || null 
-                        })}
-                        className="w-full bg-[#0A0A0A]/60 border border-[#D4AF37]/20 rounded-lg px-4 py-4 text-white focus:border-[#D4AF37]/60 focus:outline-none font-mono text-sm transition-all duration-300 input-glow"
+              <div className="h-px bg-gradient-to-r from-transparent via-[#D4AF37]/20 to-transparent my-8" />
+
+              {['anthropic', 'openai', 'gemini'].map(p => (
+                <div key={p}>
+                  <label className="block text-xs uppercase text-[#D4AF37] mb-2 font-mono opacity-80">
+                    {p} API Key
+                  </label>
+                  <div className="relative group">
+                    <input
+                      type={showKeys[p] ? "text" : "password"}
+                      value={keys[p]}
+                      onChange={(e) => setKeys({ ...keys, [p]: e.target.value })}
+                      placeholder={`sk-...`}
+                      className="w-full bg-[#0A0A0A]/60 border border-[#D4AF37]/20 rounded-lg px-4 py-4 pr-12 text-white focus:border-[#D4AF37]/60 focus:outline-none font-mono text-sm transition-all duration-300 input-glow"
+                    />
+                    <button
+                      onClick={() => toggleShow(p)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-gray-500 hover:text-[#D4AF37] transition-colors rounded-full hover:bg-[#D4AF37]/10"
                     >
-                        <option value="">Default (use provider default)</option>
-                        <optgroup label="Anthropic">
-                        {AVAILABLE_MODELS.anthropic.map(m => (
-                            <option key={m.id} value={m.id}>{m.name}</option>
-                        ))}
-                        </optgroup>
-                        <optgroup label="OpenAI">
-                        {AVAILABLE_MODELS.openai.map(m => (
-                            <option key={m.id} value={m.id}>{m.name}</option>
-                        ))}
-                        </optgroup>
-                        <optgroup label="Gemini">
-                        {AVAILABLE_MODELS.gemini.map(m => (
-                            <option key={m.id} value={m.id}>{m.name}</option>
-                        ))}
-                        </optgroup>
-                    </select>
-                    </div>
-                ))}
+                      {showKeys[p] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
-            )}
+              ))}
+            </div>
+          )}
+
+          {/* Models Tab */}
+          {activeTab === 'models' && (
+            <div className="space-y-6 animate-fade-in">
+              <div className="bg-[#D4AF37]/5 border border-[#D4AF37]/20 p-4 rounded-xl mb-6">
+                <p className="text-xs text-[#D4AF37] font-mono leading-relaxed">
+                  💎 Advanced: Override default models for specific stages in the pipeline.
+                </p>
+              </div>
+
+              {[
+                { key: 'questions', label: 'Questions Generation' },
+                { key: 'blueprint', label: 'Blueprint Generation' },
+                { key: 'refinement', label: 'Blueprint Refinement' },
+                { key: 'mockup', label: 'Mockup Generation' }
+              ].map(stage => (
+                <div key={stage.key}>
+                  <label className="block text-xs uppercase text-[#D4AF37] mb-2 font-mono opacity-80">
+                    {stage.label}
+                  </label>
+                  <select
+                    value={stageModels[stage.key] || ''}
+                    onChange={(e) => setStageModels({
+                      ...stageModels,
+                      [stage.key]: e.target.value || null
+                    })}
+                    className="w-full bg-[#0A0A0A]/60 border border-[#D4AF37]/20 rounded-lg px-4 py-4 text-white focus:border-[#D4AF37]/60 focus:outline-none font-mono text-sm transition-all duration-300 input-glow"
+                  >
+                    <option value="">Default (use provider default)</option>
+                    <optgroup label="Anthropic">
+                      {AVAILABLE_MODELS.anthropic.map(m => (
+                        <option key={m.id} value={m.id}>{m.name}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="OpenAI">
+                      {AVAILABLE_MODELS.openai.map(m => (
+                        <option key={m.id} value={m.id}>{m.name}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Gemini">
+                      {AVAILABLE_MODELS.gemini.map(m => (
+                        <option key={m.id} value={m.id}>{m.name}</option>
+                      ))}
+                    </optgroup>
+                  </select>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Second Pass Tab */}
           {activeTab === 'secondpass' && (
@@ -346,13 +345,11 @@ export default function SettingsView() {
                 </div>
                 <button
                   onClick={() => setEnableSecondPass(!enableSecondPass)}
-                  className={`relative w-14 h-7 rounded-full transition-colors ${
-                    enableSecondPass ? 'bg-[#D4AF37]' : 'bg-[#333]'
-                  }`}
+                  className={`relative w-12 h-6 rounded-full transition-colors duration-300 focus:outline-none ${enableSecondPass ? 'bg-[#D4AF37]' : 'bg-[#333]'
+                    }`}
                 >
-                  <span className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-transform ${
-                    enableSecondPass ? 'translate-x-8' : 'translate-x-1'
-                  }`} />
+                  <span className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform duration-300 ${enableSecondPass ? 'translate-x-7' : 'translate-x-1'
+                    }`} />
                 </button>
               </div>
 
@@ -434,7 +431,7 @@ export default function SettingsView() {
               {!isAuthenticated ? (
                 <>
                   <div className="h-px bg-[#333] my-6" />
-                  
+
                   <div className="p-6 bg-[#0A0A0A]/60 rounded-xl border border-[#D4AF37]/20">
                     <div className="flex items-center gap-3 mb-4">
                       <LogIn className="w-5 h-5 text-[#D4AF37]" />
@@ -491,7 +488,7 @@ export default function SettingsView() {
               ) : (
                 <>
                   <div className="h-px bg-[#333] my-6" />
-                  
+
                   <div className="p-6 bg-emerald-900/10 rounded-xl border border-emerald-500/20">
                     <div className="flex items-center justify-between">
                       <div>
@@ -520,7 +517,7 @@ export default function SettingsView() {
               )}
 
               <div className="h-px bg-[#333] my-8" />
-              
+
               <div className="p-6 bg-[#0A0A0A] rounded-lg border border-[#333]">
                 <div className="flex items-center gap-3 mb-3">
                   <Server className="w-5 h-5 text-[#D4AF37]" />
@@ -529,64 +526,64 @@ export default function SettingsView() {
                 <p className="text-sm text-gray-500 font-mono leading-relaxed mb-4">
                   Configure Resend to enable sending blueprints via email.
                 </p>
-                
-                <div className="space-y-4">
-                     <div>
-                        <label className="block text-xs uppercase text-[#D4AF37] mb-2 font-mono opacity-80">
-                        Resend API Key
-                        </label>
-                        <input
-                        type="password"
-                        defaultValue={localStorage.getItem('resend_api_key') || ''}
-                        onChange={(e) => {
-                            localStorage.setItem('resend_api_key', e.target.value);
-                        }}
-                        placeholder="re_..."
-                        className="w-full bg-[#0A0A0A]/60 border border-[#D4AF37]/20 rounded-lg px-4 py-4 text-white focus:border-[#D4AF37]/60 focus:outline-none font-mono text-sm tracking-widest transition-all duration-300 input-glow"
-                        />
-                     </div>
 
-                     <div>
-                        <label className="block text-xs uppercase text-[#D4AF37] mb-2 font-mono opacity-80">
-                        Target Email (Recipient)
-                        </label>
-                        <input
-                        type="email"
-                        defaultValue={localStorage.getItem('target_email') || ''}
-                        onChange={(e) => {
-                            localStorage.setItem('target_email', e.target.value);
-                        }}
-                        placeholder="you@example.com"
-                        className="w-full bg-[#0A0A0A]/60 border border-[#D4AF37]/20 rounded-lg px-4 py-4 text-white focus:border-[#D4AF37]/60 focus:outline-none font-mono text-sm transition-all duration-300 input-glow"
-                        />
-                     </div>
-                     <button
-                        onClick={async () => {
-                             try {
-                                 setSaveStatus('Sending...');
-                                 const key = localStorage.getItem('resend_api_key');
-                                 const target = localStorage.getItem('target_email');
-                                 
-                                 if (!key) throw new Error('No API Key');
-                                 if (!target) throw new Error('No Target Email set');
-                                 
-                                 await import('../services/email').then(m => m.EmailService.send(
-                                     target, // To
-                                     'Test Email from Idea Refinery',
-                                     '<h1>It works!</h1><p>Your email configuration is correct.</p>',
-                                     key
-                                 ));
-                                 setSaveStatus('Email Sent!');
-                                 setTimeout(() => setSaveStatus(''), 2000);
-                             } catch(e) {
-                                 alert(e.message);
-                                 setSaveStatus('Failed');
-                             }
-                        }}
-                        className="text-xs bg-[#333] hover:bg-[#444] text-white px-3 py-2 rounded transition-colors"
-                     >
-                        Send Test Email
-                     </button>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs uppercase text-[#D4AF37] mb-2 font-mono opacity-80">
+                      Resend API Key
+                    </label>
+                    <input
+                      type="password"
+                      defaultValue={localStorage.getItem('resend_api_key') || ''}
+                      onChange={(e) => {
+                        localStorage.setItem('resend_api_key', e.target.value);
+                      }}
+                      placeholder="re_..."
+                      className="w-full bg-[#0A0A0A]/60 border border-[#D4AF37]/20 rounded-lg px-4 py-4 text-white focus:border-[#D4AF37]/60 focus:outline-none font-mono text-sm tracking-widest transition-all duration-300 input-glow"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs uppercase text-[#D4AF37] mb-2 font-mono opacity-80">
+                      Target Email (Recipient)
+                    </label>
+                    <input
+                      type="email"
+                      defaultValue={localStorage.getItem('target_email') || ''}
+                      onChange={(e) => {
+                        localStorage.setItem('target_email', e.target.value);
+                      }}
+                      placeholder="you@example.com"
+                      className="w-full bg-[#0A0A0A]/60 border border-[#D4AF37]/20 rounded-lg px-4 py-4 text-white focus:border-[#D4AF37]/60 focus:outline-none font-mono text-sm transition-all duration-300 input-glow"
+                    />
+                  </div>
+                  <button
+                    onClick={async () => {
+                      try {
+                        setSaveStatus('Sending...');
+                        const key = localStorage.getItem('resend_api_key');
+                        const target = localStorage.getItem('target_email');
+
+                        if (!key) throw new Error('No API Key');
+                        if (!target) throw new Error('No Target Email set');
+
+                        await import('../services/email').then(m => m.EmailService.send(
+                          target, // To
+                          'Test Email from Idea Refinery',
+                          '<h1>It works!</h1><p>Your email configuration is correct.</p>',
+                          key
+                        ));
+                        setSaveStatus('Email Sent!');
+                        setTimeout(() => setSaveStatus(''), 2000);
+                      } catch (e) {
+                        alert(e.message);
+                        setSaveStatus('Failed');
+                      }
+                    }}
+                    className="text-xs bg-[#333] hover:bg-[#444] text-white px-3 py-2 rounded transition-colors"
+                  >
+                    Send Test Email
+                  </button>
                 </div>
               </div>
             </div>
@@ -596,11 +593,10 @@ export default function SettingsView() {
           {activeTab === 'data' && (
             <div className="space-y-6 animate-fade-in">
               {/* Sync Mode Status */}
-              <div className={`p-6 rounded-xl border ${
-                localStorage.getItem('sync_mode') === 'server' 
-                  ? 'bg-emerald-900/10 border-emerald-500/20'
-                  : 'bg-amber-900/10 border-amber-500/20'
-              }`}>
+              <div className={`p-6 rounded-xl border ${localStorage.getItem('sync_mode') === 'server'
+                ? 'bg-emerald-900/10 border-emerald-500/20'
+                : 'bg-amber-900/10 border-amber-500/20'
+                }`}>
                 <div className="flex items-center gap-3 mb-3">
                   {localStorage.getItem('sync_mode') === 'server' ? (
                     <>
@@ -615,12 +611,12 @@ export default function SettingsView() {
                   )}
                 </div>
                 <p className="text-sm text-gray-400 font-mono leading-relaxed">
-                  {localStorage.getItem('sync_mode') === 'server' 
+                  {localStorage.getItem('sync_mode') === 'server'
                     ? 'Your data is automatically synced to the server after each generation.'
                     : 'Your data is only stored in this browser. Clearing your cache will permanently delete your data.'
                   }
                 </p>
-                
+
                 {localStorage.getItem('sync_mode') !== 'server' && (
                   <button
                     onClick={() => setActiveTab('server')}
@@ -643,7 +639,7 @@ export default function SettingsView() {
                 <p className="text-sm text-gray-500 font-mono leading-relaxed mb-4">
                   Download a JSON backup of all your generations, prompts, and settings.
                 </p>
-                
+
                 <button
                   onClick={async () => {
                     try {
@@ -695,28 +691,28 @@ export default function SettingsView() {
 
               <div className="grid grid-cols-2 gap-6">
                 <div>
-                    <label className="block text-xs uppercase text-[#D4AF37] mb-2 font-mono opacity-80">
+                  <label className="block text-xs uppercase text-[#D4AF37] mb-2 font-mono opacity-80">
                     New PIN
-                    </label>
-                    <input
+                  </label>
+                  <input
                     type="password"
                     value={newPin}
                     onChange={(e) => setNewPin(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
                     placeholder="4-6 digits"
                     className="w-full bg-[#0A0A0A]/60 border border-[#D4AF37]/20 rounded-lg px-4 py-4 text-white focus:border-[#D4AF37]/60 focus:outline-none font-mono text-sm tracking-widest text-center transition-all duration-300 input-glow"
-                    />
+                  />
                 </div>
                 <div>
-                    <label className="block text-xs uppercase text-[#D4AF37] mb-2 font-mono opacity-80">
+                  <label className="block text-xs uppercase text-[#D4AF37] mb-2 font-mono opacity-80">
                     Confirm PIN
-                    </label>
-                    <input
+                  </label>
+                  <input
                     type="password"
                     value={confirmPin}
                     onChange={(e) => setConfirmPin(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
                     placeholder="Repeat PIN"
                     className="w-full bg-[#0A0A0A]/60 border border-[#D4AF37]/20 rounded-lg px-4 py-4 text-white focus:border-[#D4AF37]/60 focus:outline-none font-mono text-sm tracking-widest text-center transition-all duration-300 input-glow"
-                    />
+                  />
                 </div>
               </div>
 
@@ -741,9 +737,9 @@ export default function SettingsView() {
                   REMOVE PIN
                 </button>
               </div>
-              
+
               <div className="h-px bg-[#333] my-8" />
-              
+
               <div className="p-6 bg-[#0A0A0A] rounded-lg border border-[#333]">
                 <div className="flex items-center gap-3 mb-3">
                   <Server className="w-5 h-5 text-[#D4AF37]" />
@@ -754,30 +750,30 @@ export default function SettingsView() {
                 </p>
               </div>
 
-               <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-2 gap-6">
                 <div>
-                    <label className="block text-xs uppercase text-[#D4AF37] mb-2 font-mono opacity-80">
+                  <label className="block text-xs uppercase text-[#D4AF37] mb-2 font-mono opacity-80">
                     New Password
-                    </label>
-                    <input
+                  </label>
+                  <input
                     type="password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="New Password"
                     className="w-full bg-[#0A0A0A]/60 border border-[#D4AF37]/20 rounded-lg px-4 py-4 text-white focus:border-[#D4AF37]/60 focus:outline-none font-mono text-sm tracking-widest text-center transition-all duration-300 input-glow"
-                    />
+                  />
                 </div>
                 <div>
-                    <label className="block text-xs uppercase text-[#D4AF37] mb-2 font-mono opacity-80">
+                  <label className="block text-xs uppercase text-[#D4AF37] mb-2 font-mono opacity-80">
                     Confirm Password
-                    </label>
-                    <input
+                  </label>
+                  <input
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Confirm Password"
                     className="w-full bg-[#0A0A0A]/60 border border-[#D4AF37]/20 rounded-lg px-4 py-4 text-white focus:border-[#D4AF37]/60 focus:outline-none font-mono text-sm tracking-widest text-center transition-all duration-300 input-glow"
-                    />
+                  />
                 </div>
               </div>
 
@@ -789,26 +785,26 @@ export default function SettingsView() {
               )}
 
               <button
-                  onClick={handleChangePassword}
-                  className="w-full bg-[#D4AF37] hover:bg-[#C5A028] text-[#1A1A1A] py-3 rounded font-bold font-mono text-sm transition-colors"
-                >
-                  CHANGE PASSWORD
+                onClick={handleChangePassword}
+                className="w-full bg-[#D4AF37] hover:bg-[#C5A028] text-[#1A1A1A] py-3 rounded font-bold font-mono text-sm transition-colors"
+              >
+                CHANGE PASSWORD
               </button>
             </div>
           )}
 
 
 
-            {/* Save Button - In-flow on mobile, absolute on desktop */}
-            <div className="mt-8 mb-4 md:absolute md:top-6 md:right-6 md:mt-0 md:mb-0">
-                <button
-                    onClick={handleSave}
-                    className="w-full md:w-auto justify-center bg-[#D4AF37] hover:bg-[#E5C048] text-[#0A0A0A] px-8 py-3 rounded-xl font-bold flex items-center gap-2 font-mono text-sm shadow-[0_4px_20px_rgba(212,175,55,0.4)] hover:shadow-[0_4px_30px_rgba(212,175,55,0.6)] transition-all transform hover:-translate-y-1 active:translate-y-0 active:scale-95"
-                >
-                    <Save className="w-4 h-4" />
-                    {saveStatus || 'SAVE CHANGES'}
-                </button>
-            </div>
+          {/* Save Button */}
+          <div className="mt-8 mb-4 md:mt-8 md:mb-0 flex justify-end">
+            <button
+              onClick={handleSave}
+              className="w-full md:w-auto justify-center bg-[#D4AF37] hover:bg-[#E5C048] text-[#0A0A0A] px-8 py-3 rounded-xl font-bold flex items-center gap-2 font-mono text-sm shadow-[0_4px_20px_rgba(212,175,55,0.4)] hover:shadow-[0_4px_30px_rgba(212,175,55,0.6)] transition-all transform hover:-translate-y-1 active:translate-y-0 active:scale-95"
+            >
+              <Save className="w-4 h-4" />
+              {saveStatus || 'SAVE CHANGES'}
+            </button>
+          </div>
 
         </div>
       </div>
