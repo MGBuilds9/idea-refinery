@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
+import helmet from 'helmet';
 import cors from 'cors';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
@@ -36,6 +37,11 @@ seedPrompts();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// Security headers
+app.use(helmet({
+  contentSecurityPolicy: false,
+}));
 
 // CORS configuration for web and iOS
 const allowedOrigins = process.env.ALLOWED_ORIGINS
