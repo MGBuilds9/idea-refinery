@@ -10,6 +10,13 @@ export default function InputStage({ idea, setIdea, onNext, selectedPersona, set
     onNext();
   };
 
+  const handleKeyDown = (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+      e.preventDefault();
+      handleSubmit();
+    }
+  };
+
   return (
     <div className="flex flex-col items-center w-full max-w-4xl mx-auto pt-0 md:pt-4 min-h-[calc(100vh-100px)]">
 
@@ -36,20 +43,30 @@ export default function InputStage({ idea, setIdea, onNext, selectedPersona, set
               <textarea
                 value={idea}
                 onChange={(e) => setIdea(e.target.value)}
+                onKeyDown={handleKeyDown}
                 onFocus={() => setIsFocused(true)}
                 onBlur={() => setIsFocused(false)}
                 placeholder="What are you building today?"
+                aria-label="Idea description"
                 className="w-full bg-transparent border-none focus:ring-0 text-xl md:text-2xl font-serif text-white/95 placeholder:text-zinc-700 resize-none min-h-[120px] md:min-h-[160px] leading-relaxed selection:bg-[var(--color-gold-subtle)] selection:text-white"
               />
 
               <div className="flex justify-between items-center mt-4 md:mt-6 pt-4 md:pt-6 border-t border-white/5">
-                <span className={`text-xs font-mono uppercase tracking-widest transition-colors duration-300 ${isFocused ? 'text-[var(--color-gold-primary)]' : 'text-zinc-600'}`}>
-                  {isFocused ? 'System Online' : 'Standard Mode'}
-                </span>
+                <div className="flex flex-col gap-1">
+                  <span className={`text-xs font-mono uppercase tracking-widest transition-colors duration-300 ${isFocused ? 'text-[var(--color-gold-primary)]' : 'text-zinc-600'}`}>
+                    {isFocused ? 'System Online' : 'Standard Mode'}
+                  </span>
+                  {/* UX: Keyboard shortcut hint for power users */}
+                  <span className="text-[10px] text-zinc-600 font-mono hidden md:block opacity-60">
+                    CMD + ENTER to submit
+                  </span>
+                </div>
 
                 <button
                   onClick={handleSubmit}
                   disabled={!idea.trim()}
+                  aria-disabled={!idea.trim()}
+                  title={!idea.trim() ? "Please describe your idea first" : "Generate blueprint (Cmd+Enter)"}
                   className="flex items-center gap-3 px-6 py-2 md:px-8 md:py-3 bg-[var(--color-gold-subtle)] hover:bg-[var(--color-gold-primary)] text-[var(--color-gold-primary)] hover:text-black rounded-full border border-[var(--color-gold-primary)] transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-[var(--color-gold-primary)] hover:shadow-[0_0_20px_var(--color-gold-glow)] group/btn"
                 >
                   <span className="font-mono text-sm uppercase tracking-wide font-bold">Refine</span>
