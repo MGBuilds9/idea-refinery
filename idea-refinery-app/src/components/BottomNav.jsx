@@ -2,7 +2,7 @@ import React, { memo } from 'react';
 import { PlusCircle, History, Settings, Terminal } from 'lucide-react';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 
-function BottomNav({ activeView, onViewChange }) {
+const BottomNav = memo(({ activeView, onViewChange }) => {
   const menuItems = [
     { id: 'input', label: 'New', icon: PlusCircle },
     { id: 'history', label: 'History', icon: History },
@@ -53,6 +53,8 @@ function BottomNav({ activeView, onViewChange }) {
       </div>
     </div>
   );
-}
+});
 
-export default memo(BottomNav);
+BottomNav.displayName = 'BottomNav';
+
+export default BottomNav;

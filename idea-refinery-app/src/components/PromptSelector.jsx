@@ -37,7 +37,7 @@ export const PROMPT_PERSONAS = [
   }
 ];
 
-function PromptSelector({ selectedPersona, onSelect }) {
+const PromptSelector = memo(({ selectedPersona, onSelect }) => {
   return (
     <div className="w-full max-w-2xl mx-auto mb-6">
       <div className="flex items-center gap-2 mb-3">
@@ -91,6 +91,8 @@ function PromptSelector({ selectedPersona, onSelect }) {
       </div>
     </div>
   );
-}
+});
 
-export default memo(PromptSelector);
+PromptSelector.displayName = 'PromptSelector';
+
+export default PromptSelector;
