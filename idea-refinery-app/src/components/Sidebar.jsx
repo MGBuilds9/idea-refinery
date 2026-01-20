@@ -1,6 +1,7 @@
 import { PlusCircle, History, Settings, LogOut, Terminal } from 'lucide-react';
+import React, { memo } from 'react';
 
-export default function Sidebar({ activeView, onViewChange, isOpen, onClose }) {
+const Sidebar = memo(({ activeView, onViewChange, isOpen, onClose }) => {
   const menuItems = [
     { id: 'input', label: 'New Project', icon: PlusCircle },
     { id: 'history', label: 'History', icon: History },
@@ -71,4 +72,8 @@ export default function Sidebar({ activeView, onViewChange, isOpen, onClose }) {
       </div>
     </>
   );
-}
+});
+
+Sidebar.displayName = 'Sidebar';
+
+export default Sidebar;
