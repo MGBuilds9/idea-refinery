@@ -71,6 +71,7 @@ export default function LoginScreen({ onLogin, onSwitchToRegister }) {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="USERNAME"
+              aria-label="Username"
               className="w-full bg-[#1A1A1A]/80 border border-[#D4AF37]/20 rounded-lg py-3 px-4 text-[#D4AF37] placeholder-gray-700 focus:border-[#D4AF37]/60 focus:outline-none font-mono tracking-wider transition-all duration-300"
               autoFocus
             />
@@ -82,12 +83,13 @@ export default function LoginScreen({ onLogin, onSwitchToRegister }) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="PASSWORD"
+              aria-label="Password"
               className="w-full bg-[#1A1A1A]/80 border border-[#D4AF37]/20 rounded-lg py-3 px-4 text-[#D4AF37] placeholder-gray-700 focus:border-[#D4AF37]/60 focus:outline-none font-mono tracking-wider transition-all duration-300"
             />
           </div>
 
           {error && (
-            <div className="flex items-center justify-center gap-2 text-red-400/90 text-xs font-mono bg-red-900/10 py-2 rounded">
+            <div role="alert" aria-live="polite" className="flex items-center justify-center gap-2 text-red-400/90 text-xs font-mono bg-red-900/10 py-2 rounded">
               <AlertCircle className="w-3 h-3" />
               <span>{error}</span>
             </div>
