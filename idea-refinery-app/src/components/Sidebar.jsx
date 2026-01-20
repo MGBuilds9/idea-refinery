@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { PlusCircle, History, Settings, LogOut, Terminal } from 'lucide-react';
+import { PlusCircle, History, Settings, Terminal } from 'lucide-react';
 
 const Sidebar = memo(({ activeView, onViewChange, isOpen, onClose }) => {
   const menuItems = [
@@ -20,17 +20,16 @@ const Sidebar = memo(({ activeView, onViewChange, isOpen, onClose }) => {
       )}
 
       {/* Sidebar Drawer */}
-      <div className={`w-64 bg-[var(--color-bg-surface)] border-r border-[var(--glass-border)] hidden md:flex md:flex-col h-screen fixed left-0 top-0 z-50 backdrop-blur-md transition-transform duration-300 ease-in-out ${
+      <div className={`w-64 bg-[var(--color-surface)] border-r border-[var(--color-border)] hidden md:flex md:flex-col h-screen fixed left-0 top-0 z-50 shadow-[var(--shadow-lg)] transition-transform duration-300 ease-in-out ${
           isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
       }`}>
         {/* Logo Area */}
-        <div className="p-8 border-b border-[var(--glass-border)] flex flex-col items-center justify-center gap-4">
+        <div className="p-8 border-b border-[var(--color-border)] flex flex-col items-center justify-center gap-4">
           <div className="relative group cursor-pointer" onClick={() => onViewChange('input')}>
-             <div className="absolute -inset-4 bg-[var(--color-gold-glow)] opacity-0 group-hover:opacity-20 blur-xl transition-opacity duration-500 rounded-full"></div>
              <img 
               src="/idea-refinery-logo.svg" 
               alt="Idea Refinery" 
-              className="w-32 h-32 object-contain relative z-10 transition-transform duration-500 group-hover:scale-105 drop-shadow-[0_0_15px_rgba(212,175,55,0.1)]"
+              className="w-32 h-32 object-contain relative z-10 transition-transform duration-200 group-hover:scale-105"
             />
           </div>
         </div>
@@ -44,17 +43,18 @@ const Sidebar = memo(({ activeView, onViewChange, isOpen, onClose }) => {
               <button
                 key={item.id}
                 onClick={() => onViewChange(item.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 font-mono text-sm group relative overflow-hidden ${
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 font-[var(--font-body)] font-medium text-sm group relative overflow-hidden cursor-pointer ${
                   isActive 
-                    ? 'text-[var(--color-gold-primary)] bg-[var(--color-gold-subtle)] border border-[var(--color-gold-subtle)]' 
-                    : 'text-zinc-400 hover:text-zinc-100 hover:bg-white/5'
+                    ? 'text-[var(--color-primary)] bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20' 
+                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-background)]'
                 }`}
+                style={{ minHeight: '44px' }}
               >
-                <item.icon className={`w-4 h-4 transition-colors ${isActive ? 'text-[var(--color-gold-primary)]' : 'text-zinc-500 group-hover:text-zinc-300'}`} />
-                <span className="tracking-wide relative z-10">{item.label}</span>
+                <item.icon className={`w-5 h-5 transition-colors ${isActive ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)] group-hover:text-[var(--color-text)]'}`} />
+                <span className="relative z-10">{item.label}</span>
                 
                 {isActive && (
-                  <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-[var(--color-gold-primary)] shadow-[0_0_10px_var(--color-gold-primary)]" />
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-[var(--color-primary)] rounded-r" />
                 )}
               </button>
             );
@@ -62,11 +62,11 @@ const Sidebar = memo(({ activeView, onViewChange, isOpen, onClose }) => {
         </nav>
   
         {/* Footer / Version */}
-        <div className="p-6 border-t border-[var(--glass-border)] bg-black/20">
-          <div className="text-[10px] text-zinc-600 font-mono text-center leading-relaxed">
-            <span className="text-gold-gradient font-bold tracking-widest">IDEA REFINERY</span>
+        <div className="p-6 border-t border-[var(--color-border)] bg-[var(--color-background)]">
+          <div className="text-[10px] text-[var(--color-text-muted)] font-[var(--font-body)] text-center leading-relaxed">
+            <span className="text-[var(--color-primary)] font-[var(--font-heading)] font-bold tracking-widest text-xs">IDEA REFINERY</span>
             <br/>
-            <span className="opacity-50">v2.1 • CLASSIFIED</span>
+            <span className="opacity-70">v2.1 • Premium Edition</span>
           </div>
         </div>
       </div>

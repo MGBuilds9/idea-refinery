@@ -143,10 +143,10 @@ function App() {
   return (
     <>
       {initializing && (
-        <div className="min-h-screen bg-[#09090b] flex items-center justify-center">
+        <div className="min-h-screen bg-[var(--color-background)] flex items-center justify-center">
           <div className="text-center">
-            <div className="text-[#D4AF37] text-4xl mb-4 animate-bounce">⚡</div>
-            <p className="text-gray-400 font-mono text-sm">Refining Idea Space...</p>
+            <Sparkles className="w-12 h-12 text-[var(--color-primary)] mb-4 animate-pulse-slow mx-auto" />
+            <p className="text-[var(--color-text-muted)] font-[var(--font-body)] text-sm">Refining Idea Space...</p>
           </div>
         </div>
       )}
@@ -156,10 +156,10 @@ function App() {
       )}
 
       {!initializing && !publicBlueprintId && checkingLock && (
-        <div className="min-h-screen bg-[#1A1A1A] flex items-center justify-center">
+        <div className="min-h-screen bg-[var(--color-background)] flex items-center justify-center">
           <div className="flex flex-col items-center">
-            <Sparkles className="w-8 h-8 text-[#D4AF37] animate-pulse mb-4" />
-            <p className="text-[#D4AF37] font-mono text-xs">INITIALIZING REFINERY...</p>
+            <Sparkles className="w-8 h-8 text-[var(--color-primary)] animate-pulse mb-4" />
+            <p className="text-[var(--color-text-muted)] font-[var(--font-body)] text-xs">INITIALIZING REFINERY...</p>
           </div>
         </div>
       )}
@@ -188,7 +188,7 @@ function App() {
           )}
 
           {isAuthenticated && !isLocked && (
-            <div className="flex min-h-screen bg-[var(--color-bg-deep)] text-white font-sans selection:bg-[var(--color-gold-subtle)] selection:text-white">
+            <div className="flex min-h-screen bg-[var(--color-background)] text-[var(--color-text)] font-[var(--font-body)] selection:bg-[var(--color-primary)]/20 selection:text-[var(--color-text)]">
 
 
               {/* Sidebar */}
@@ -263,8 +263,8 @@ function App() {
 
                     {stage === 'generating' && (
                       <div className="flex flex-col items-center justify-center py-20 animate-pulse">
-                        <Sparkles className="w-16 h-16 text-[#D4AF37] mb-6" />
-                        <p className="text-xl text-gray-300 font-mono">{loadingMessage || 'Crafting your blueprint...'}</p>
+                        <Sparkles className="w-16 h-16 text-[var(--color-primary)] mb-6" />
+                        <p className="text-xl text-[var(--color-text)] font-[var(--font-body)]">{loadingMessage || 'Crafting your blueprint...'}</p>
                         {isSecondPassEnabled && loadingMessage.includes('Refining') && (
                           <div className="flex items-center gap-2 mt-4 text-purple-300">
                             <Zap className="w-5 h-5" />

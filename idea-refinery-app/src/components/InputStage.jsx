@@ -19,10 +19,17 @@ export default function InputStage({ idea, setIdea, onNext, selectedPersona, set
 
   return (
     <div className="flex flex-col items-center w-full max-w-4xl mx-auto pt-0 md:pt-4 min-h-[calc(100vh-100px)]">
+      {/* Hero Section */}
+      <div className="w-full text-center mb-8 md:mb-12 px-4">
+        <h1 className="text-4xl md:text-5xl lg:text-6xl font-[var(--font-heading)] font-bold text-[var(--color-text)] mb-4">
+          Transform Your Ideas
+        </h1>
+        <p className="text-lg md:text-xl text-[var(--color-text-muted)] font-[var(--font-body)] max-w-2xl mx-auto">
+          Describe your concept and watch it become a comprehensive blueprint
+        </p>
+      </div>
 
-
-
-      {/* 2. Persona Selector */}
+      {/* Persona Selector */}
       <div className="w-full mb-8 shrink-0">
         <PromptSelector
           selectedPersona={selectedPersona}
@@ -30,16 +37,14 @@ export default function InputStage({ idea, setIdea, onNext, selectedPersona, set
         />
       </div>
 
-      {/* 3. Input Box - Flex Grow to take remaining space but centered */}
+      {/* Input Box */}
       <div className="flex-1 w-full flex flex-col items-center justify-start max-w-2xl px-4 pb-20 pt-8 md:pt-12">
         <div
-          className={`w-full transition-all duration-700 ${isFocused ? 'scale-105' : 'scale-100'}`}
+          className={`w-full transition-all duration-300 ${isFocused ? 'scale-[1.02]' : 'scale-100'}`}
         >
           <div className="relative group">
-            {/* Breathing Glow Behind */}
-            <div className={`absolute -inset-1 bg-gradient-to-r from-[var(--color-gold-glow)] via-[var(--color-gold-subtle)] to-[var(--color-gold-glow)] rounded-2xl blur-2xl transition-opacity duration-1000 ${isFocused ? 'opacity-40 animate-pulse' : 'opacity-0'}`}></div>
-
-            <div className="relative glass-panel rounded-2xl p-6 md:p-8 border border-[var(--glass-border)] transition-all duration-500 hover:border-[var(--color-gold-subtle)]">
+            {/* Card Container */}
+            <div className="relative bg-[var(--color-surface)] rounded-2xl p-6 md:p-8 border border-[var(--color-border)] shadow-[var(--shadow-md)] transition-all duration-200 hover:shadow-[var(--shadow-lg)]">
               <textarea
                 value={idea}
                 onChange={(e) => setIdea(e.target.value)}
@@ -48,17 +53,18 @@ export default function InputStage({ idea, setIdea, onNext, selectedPersona, set
                 onBlur={() => setIsFocused(false)}
                 placeholder="What are you building today?"
                 aria-label="Idea description"
-                className="w-full bg-transparent border-none focus:ring-0 text-xl md:text-2xl font-serif text-white/95 placeholder:text-zinc-700 resize-none min-h-[120px] md:min-h-[160px] leading-relaxed selection:bg-[var(--color-gold-subtle)] selection:text-white"
+                className="w-full bg-transparent border-none focus:ring-0 text-xl md:text-2xl font-[var(--font-body)] text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] resize-none min-h-[120px] md:min-h-[160px] leading-relaxed selection:bg-[var(--color-primary)]/20 selection:text-[var(--color-text)] outline-none"
+                style={{ minHeight: '160px' }}
               />
 
-              <div className="flex justify-between items-center mt-4 md:mt-6 pt-4 md:pt-6 border-t border-white/5">
+              <div className="flex justify-between items-center mt-4 md:mt-6 pt-4 md:pt-6 border-t border-[var(--color-border)]">
                 <div className="flex flex-col gap-1">
-                  <span className={`text-xs font-mono uppercase tracking-widest transition-colors duration-300 ${isFocused ? 'text-[var(--color-gold-primary)]' : 'text-zinc-600'}`}>
-                    {isFocused ? 'System Online' : 'Standard Mode'}
+                  <span className={`text-xs font-[var(--font-body)] font-semibold uppercase tracking-wide transition-colors duration-200 ${isFocused ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}`}>
+                    {isFocused ? 'Ready to Refine' : 'Start Typing'}
                   </span>
-                  {/* UX: Keyboard shortcut hint for power users */}
-                  <span className="text-[10px] text-zinc-600 font-mono hidden md:block opacity-60">
-                    CMD + ENTER to submit
+                  {/* Keyboard shortcut hint */}
+                  <span className="text-[10px] text-[var(--color-text-muted)] font-[var(--font-body)] hidden md:block">
+                    Press Cmd+Enter to submit
                   </span>
                 </div>
 
@@ -67,20 +73,23 @@ export default function InputStage({ idea, setIdea, onNext, selectedPersona, set
                   disabled={!idea.trim()}
                   aria-disabled={!idea.trim()}
                   title={!idea.trim() ? "Please describe your idea first" : "Generate blueprint (Cmd+Enter)"}
-                  className="flex items-center gap-3 px-6 py-2 md:px-8 md:py-3 bg-[var(--color-gold-subtle)] hover:bg-[var(--color-gold-primary)] text-[var(--color-gold-primary)] hover:text-black rounded-full border border-[var(--color-gold-primary)] transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-[var(--color-gold-primary)] hover:shadow-[0_0_20px_var(--color-gold-glow)] group/btn"
+                  className="btn-primary cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <span className="font-mono text-sm uppercase tracking-wide font-bold">Refine</span>
-                  <Send size={16} className="transition-transform group-hover/btn:translate-x-1" />
+                  <span className="font-semibold">Refine</span>
+                  <Send size={18} className="transition-transform group-hover:translate-x-1" />
                 </button>
               </div>
             </div>
           </div>
 
+          {/* Feature Indicators */}
           {!isFocused && (
-            <div className="mt-8 md:mt-12 flex justify-center gap-8 animate-fade-in text-zinc-600">
+            <div className="mt-8 md:mt-12 flex justify-center gap-8 animate-fade-in">
               <div className="flex flex-col items-center gap-2 group cursor-default">
-                <Sparkles size={16} className="text-[var(--color-gold-dim)] transition-colors group-hover:text-[var(--color-gold-primary)]" />
-                <span className="text-[10px] font-mono uppercase tracking-widest opacity-60 group-hover:opacity-100 transition-opacity">AI Enhanced</span>
+                <Sparkles size={20} className="text-[var(--color-primary)] transition-colors group-hover:text-[var(--color-secondary)]" />
+                <span className="text-xs font-[var(--font-body)] font-medium text-[var(--color-text-muted)] group-hover:text-[var(--color-text)] transition-colors">
+                  AI Enhanced
+                </span>
               </div>
             </div>
           )}

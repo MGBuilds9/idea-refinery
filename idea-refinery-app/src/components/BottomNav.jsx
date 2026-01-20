@@ -11,7 +11,7 @@ const BottomNav = memo(({ activeView, onViewChange }) => {
   ];
 
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-[var(--color-bg-surface)] border-t border-[var(--glass-border)] z-50 backdrop-blur-xl pb-safe">
+    <div className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-[var(--color-surface)] border-t border-[var(--color-border)] shadow-[var(--shadow-lg)] z-50 pb-safe">
       <div className="grid grid-cols-4 h-full">
         {menuItems.map((item) => {
           const isActive = activeView === item.id || (item.id === 'input' && (activeView === 'questions' || activeView === 'blueprint' || activeView === 'mockup'));
@@ -23,27 +23,28 @@ const BottomNav = memo(({ activeView, onViewChange }) => {
                 await Haptics.impact({ style: ImpactStyle.Light });
                 onViewChange(item.id);
               }}
-              className="flex flex-col items-center justify-center gap-1 relative group"
+              className="flex flex-col items-center justify-center gap-1 relative group cursor-pointer transition-colors duration-200"
+              style={{ minHeight: '64px', minWidth: '64px' }}
             >
               {/* Active Indicator Line */}
               {isActive && (
-                <div className="absolute top-0 left-1 right-1 h-0.5 bg-[var(--color-gold-primary)] shadow-[0_0_10px_var(--color-gold-primary)]" />
+                <div className="absolute top-0 left-2 right-2 h-1 bg-[var(--color-primary)] rounded-b" />
               )}
               
               {/* Icon */}
               <item.icon 
-                className={`w-5 h-5 transition-all duration-300 ${
+                className={`w-6 h-6 transition-all duration-200 ${
                   isActive 
-                    ? 'text-[var(--color-gold-primary)] drop-shadow-[0_0_5px_rgba(212,175,55,0.5)]' 
-                    : 'text-zinc-500 group-hover:text-zinc-300'
+                    ? 'text-[var(--color-primary)]' 
+                    : 'text-[var(--color-text-muted)] group-hover:text-[var(--color-text)]'
                 }`} 
               />
               
               {/* Label */}
-              <span className={`text-[10px] font-mono tracking-wide transition-colors duration-300 ${
+              <span className={`text-[10px] font-[var(--font-body)] font-medium transition-colors duration-200 ${
                 isActive 
-                  ? 'text-[var(--color-gold-primary)]' 
-                  : 'text-zinc-500 group-hover:text-zinc-300'
+                  ? 'text-[var(--color-primary)]' 
+                  : 'text-[var(--color-text-muted)] group-hover:text-[var(--color-text)]'
               }`}>
                 {item.label}
               </span>
