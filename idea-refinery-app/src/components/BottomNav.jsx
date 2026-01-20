@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { PlusCircle, History, Settings, Terminal } from 'lucide-react';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 
-export default function BottomNav({ activeView, onViewChange }) {
+function BottomNav({ activeView, onViewChange }) {
   const menuItems = [
     { id: 'input', label: 'New', icon: PlusCircle },
     { id: 'history', label: 'History', icon: History },
@@ -54,3 +54,5 @@ export default function BottomNav({ activeView, onViewChange }) {
     </div>
   );
 }
+
+export default memo(BottomNav);

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Sparkles, Target, Lightbulb, Rocket, Zap } from 'lucide-react';
 
 // Prompt personas that modify the system prompt tone
@@ -37,7 +37,7 @@ export const PROMPT_PERSONAS = [
   }
 ];
 
-export default function PromptSelector({ selectedPersona, onSelect }) {
+function PromptSelector({ selectedPersona, onSelect }) {
   return (
     <div className="w-full max-w-2xl mx-auto mb-6">
       <div className="flex items-center gap-2 mb-3">
@@ -92,3 +92,5 @@ export default function PromptSelector({ selectedPersona, onSelect }) {
     </div>
   );
 }
+
+export default memo(PromptSelector);

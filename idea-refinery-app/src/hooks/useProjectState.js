@@ -333,7 +333,7 @@ export function useProjectState() {
     }
   };
 
-  const handleViewChange = (view) => {
+  const handleViewChange = useCallback((view) => {
       if (view === 'input' && activeView !== 'input') {
           // Switching back to project view, keep state
       } else if (view === 'input' && activeView === 'input') {
@@ -356,7 +356,7 @@ export function useProjectState() {
       }
 
       setActiveView(view);
-  };
+  }, [activeView, loadHistory]);
 
   return {
     state: {
