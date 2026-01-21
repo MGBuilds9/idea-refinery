@@ -59,10 +59,10 @@ export default function MockupStage({
                 </div>
                 <button
                   onClick={() => {
-                    navigator.clipboard.writeText(masterPrompt);
-                    alert('Master prompt copied! Paste into Cursor, Lovable, Bolt, or Replit.');
-                  }}
-                  className="flex items-center gap-2 bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded text-sm transition-all font-mono"
+                  navigator.clipboard.writeText(masterPrompt);
+                  alert('Master prompt copied! Paste into Cursor, OpenCode, Lovable, Bolt, or Replit.');
+                }}
+                className="flex items-center gap-2 bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded text-sm transition-all font-mono"
                 >
                   <Copy className="w-4 h-4" />
                   COPY PROMPT
@@ -70,7 +70,7 @@ export default function MockupStage({
               </div>
               <div className="p-6 max-h-64 overflow-y-auto bg-slate-900/50">
                 <p className="text-xs text-purple-200 mb-3 font-mono">
-                  Paste this into Cursor, Antigravity, Lovable, Replit, or Bolt to start building:
+                  Paste this into Cursor, OpenCode, Lovable, Replit, or Bolt to start building:
                 </p>
                 <pre className="whitespace-pre-wrap text-xs text-purple-100 font-mono">
                   {masterPrompt}
@@ -156,6 +156,19 @@ export default function MockupStage({
                   <FileCode className="w-6 h-6 text-slate-400 group-hover:text-[#D4AF37] mb-2" />
                   <span className="text-sm font-mono text-slate-300">prompt.md</span>
                   <span className="text-xs text-slate-500 mt-1">Full Context Dump</span>
+                </button>
+
+                <button 
+                  onClick={() => {
+                    const content = ExportService.toOpenCodePrompt(ideaSpec);
+                    const name = (ideaSpec.meta?.name || 'project').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                    ExportService.downloadFile(`${name}-opencode.md`, content);
+                  }}
+                  className="flex flex-col items-center justify-center p-4 bg-slate-800/50 border border-slate-700 rounded hover:bg-slate-800 hover:border-[#D4AF37] transition-all group"
+                >
+                  <Terminal className="w-6 h-6 text-slate-400 group-hover:text-[#D4AF37] mb-2" />
+                  <span className="text-sm font-mono text-slate-300">opencode.md</span>
+                  <span className="text-xs text-slate-500 mt-1">OpenCode Agent</span>
                 </button>
               </div>
 
