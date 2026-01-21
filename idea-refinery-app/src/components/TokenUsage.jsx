@@ -1,18 +1,20 @@
-import React from 'react';
+import React, { useMemo, memo } from 'react';
 import { Database } from 'lucide-react';
 
-export default function TokenUsage({ contextItems = [] }) {
+const TokenUsage = memo(function TokenUsage({ contextItems = [] }) {
   // Rough estimation: 1 word ~= 1.3 tokens. 4 chars ~= 1 token.
-  const calculateTokens = (items) => {
+  // ⚡ Bolt Optimization: Memoize token calculation to avoid expensive O(N) JSON.stringify on every render
+  const totalTokens = useMemo(() => {
     let text = '';
-    items.forEach(item => {
+    contextItems.forEach(item => {
       text += JSON.stringify(item.content || item);
     });
     return Math.ceil(text.length / 4);
-  };
+  }, [contextItems]);
 
-  const totalTokens = calculateTokens(contextItems);
-  const isCompressed = contextItems.some(i => i.role === 'system_note');
+  const isCompressed = useMemo(() => {
+    return contextItems.some(i => i.role === 'system_note');
+  }, [contextItems]);
 
   return (
     <div className="flex items-center gap-4 text-xs font-mono text-gray-500 bg-[#0A0A0A] border border-[#333] px-3 py-1.5 rounded-full shadow-inner">
@@ -25,4 +27,6 @@ export default function TokenUsage({ contextItems = [] }) {
       </div>
     </div>
   );
-}
+});
+
+export default TokenUsage;
