@@ -129,6 +129,12 @@ const apiLimiter = rateLimit({
   message: { error: 'Too many requests, please try again later.' }
 });
 
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Strict limit for auth endpoints: 5 attempts per 15 mins
+  message: { error: 'Too many login attempts, please try again later.' }
+});
+
 // Apply to all API routes
 app.use('/api/', apiLimiter);
 
@@ -156,7 +162,7 @@ const authenticateToken = (req, res, next) => {
 // For now, let's just expose the auth endpoints publicly and protect sync/ai endpoints if desired.
 // Since the user wants a simple admin login, let's protect everything under /api except auth.
 
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', authLimiter, async (req, res) => {
   const { username, password } = req.body;
   try {
     const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
@@ -179,7 +185,7 @@ app.post('/api/auth/login', async (req, res) => {
 });
 
 // User Registration (Open)
-app.post('/api/auth/register', async (req, res) => {
+app.post('/api/auth/register', authLimiter, async (req, res) => {
   const { username, password } = req.body;
 
   // Validate input
