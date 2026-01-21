@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Save, Eye, EyeOff, Zap, Bot, Settings2, Lock, Server, LogIn, LogOut, Download, Database, CloudOff } from 'lucide-react';
+import { Save, Eye, EyeOff, Zap, Bot, Settings2, Lock, Server, LogIn, LogOut, Download, Database, CloudOff, Palette } from 'lucide-react';
+import { useTheme } from '../contexts/ThemeContext';
 import { llm, AVAILABLE_MODELS } from '../lib/llm';
 import { saveSetting, exportAllData } from '../services/db';
 import { hashPin } from '../services/crypto';
@@ -105,9 +106,12 @@ export default function SettingsView() {
     return AVAILABLE_MODELS[p] || [];
   };
 
+  const { currentTheme, setTheme, themes } = useTheme();
+
   const tabs = [
     { id: 'keys', label: 'API Keys', icon: Settings2 },
     { id: 'aiconfig', label: 'AI Configuration', icon: Bot },
+    { id: 'appearance', label: 'Appearance', icon: Palette },
     { id: 'syncdata', label: 'Sync & Data', icon: Database },
     { id: 'security', label: 'Security', icon: Lock }
   ];
@@ -276,12 +280,130 @@ export default function SettingsView() {
             </div>
           )}
 
+          {/* Appearance Tab */}
+          {activeTab === 'appearance' && (
+            <div className="space-y-6 animate-fade-in">
+              <div className="p-6 bg-white rounded-xl border border-[var(--color-border)] shadow-sm">
+                <div className="flex items-center gap-3 mb-4">
+                  <Palette className="w-5 h-5 text-[var(--color-primary)]" />
+                  <p className="text-[var(--color-text)] font-semibold font-heading">Choose Your Theme</p>
+                </div>
+                <p className="text-sm text-[var(--color-text-muted)] mb-6">
+                  Select a color scheme that matches your style. Changes apply instantly.
+                </p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {Object.values(themes).map((theme) => (
+                    <button
+                      key={theme.id}
+                      onClick={() => setTheme(theme.id)}
+                      className={`p-4 rounded-xl border-2 transition-all duration-200 text-left ${currentTheme === theme.id
+                          ? 'border-[var(--color-primary)] bg-blue-50 shadow-md'
+                          : 'border-[var(--color-border)] hover:border-[var(--color-primary)]/50 hover:shadow-sm'
+                        }`}
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <h3 className="font-semibold text-[var(--color-text)] font-heading">{theme.name}</h3>
+                          <p className="text-xs text-[var(--color-text-muted)] mt-1">{theme.description}</p>
+                        </div>
+                        {currentTheme === theme.id && (
+                          <div className="w-5 h-5 rounded-full bg-[var(--color-primary)] flex items-center justify-center">
+                            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex gap-2">
+                        <div
+                          className="w-8 h-8 rounded-lg border border-gray-200 shadow-sm"
+                          style={{ backgroundColor: theme.colors.primary }}
+                          title="Primary"
+                        />
+                        <div
+                          className="w-8 h-8 rounded-lg border border-gray-200 shadow-sm"
+                          style={{ backgroundColor: theme.colors.secondary }}
+                          title="Secondary"
+                        />
+                        <div
+                          className="w-8 h-8 rounded-lg border border-gray-200 shadow-sm"
+                          style={{ backgroundColor: theme.colors.cta }}
+                          title="CTA"
+                        />
+                        <div
+                          className="w-8 h-8 rounded-lg border border-gray-200 shadow-sm"
+                          style={{ backgroundColor: theme.colors.background }}
+                          title="Background"
+                        />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-[var(--color-text-muted)] leading-relaxed">
+                  💡 <strong>Tip:</strong> Your theme preference is saved automatically and will persist across sessions.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* AI Configuration Tab (Combined Models + Second Pass) */}
           {activeTab === 'aiconfig' && (
             <div className="space-y-6 animate-fade-in">
+              {/* Stage Models Configuration */}
+              <div className="bg-orange-50 border border-orange-200 p-4 rounded-xl">
+                <p className="text-sm text-[var(--color-text)] leading-relaxed">
+                  <strong>Advanced:</strong> Override default models for specific stages in the pipeline.
+                </p>
+              </div>
+
+              {[
+                { key: 'questions', label: 'Questions Generation' },
+                { key: 'blueprint', label: 'Blueprint Generation' },
+                { key: 'refinement', label: 'Blueprint Refinement' },
+                { key: 'mockup', label: 'Mockup Generation' }
+              ].map(stage => (
+                <div key={stage.key}>
+                  <label className="block text-sm font-semibold text-[var(--color-text)] mb-2">
+                    {stage.label}
+                  </label>
+                  <select
+                    value={stageModels[stage.key] || ''}
+                    onChange={(e) => setStageModels({
+                      ...stageModels,
+                      [stage.key]: e.target.value || null
+                    })}
+                    className="input w-full"
+                  >
+                    <option value="">Default (use provider default)</option>
+                    <optgroup label="Anthropic">
+                      {AVAILABLE_MODELS.anthropic.map(m => (
+                        <option key={m.id} value={m.id}>{m.name}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="OpenAI">
+                      {AVAILABLE_MODELS.openai.map(m => (
+                        <option key={m.id} value={m.id}>{m.name}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Gemini">
+                      {AVAILABLE_MODELS.gemini.map(m => (
+                        <option key={m.id} value={m.id}>{m.name}</option>
+                      ))}
+                    </optgroup>
+                  </select>
+                </div>
+              ))}
+
+              <div className="h-px bg-[var(--color-border)] my-8" />
+
               {/* Second Pass Toggle */}
               <div className="flex items-center justify-between p-6 bg-white rounded-xl border border-[var(--color-border)] shadow-sm">
-                <div>
+                <div className="flex-1 pr-4">
                   <p className="text-[var(--color-text)] font-semibold mb-1 font-heading">Enable Second Pass Refinement</p>
                   <p className="text-sm text-[var(--color-text-muted)]">
                     Use a second AI to critique and improve the blueprint automatically
@@ -289,7 +411,7 @@ export default function SettingsView() {
                 </div>
                 <button
                   onClick={() => setEnableSecondPass(!enableSecondPass)}
-                  className={`relative w-12 h-6 rounded-full transition-colors duration-300 focus:outline-none ${enableSecondPass ? 'bg-[var(--color-cta)]' : 'bg-gray-300'
+                  className={`relative w-12 h-6 rounded-full transition-colors duration-300 focus:outline-none shrink-0 ${enableSecondPass ? 'bg-[var(--color-cta)]' : 'bg-gray-300'
                     }`}
                 >
                   <span className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform duration-300 shadow-md ${enableSecondPass ? 'translate-x-7' : 'translate-x-1'
@@ -343,84 +465,24 @@ export default function SettingsView() {
                   </div>
                 </div>
               )}
-
-              <div className="h-px bg-[var(--color-border)] my-8" />
-
-              {/* Stage Models Configuration */}
-              <div className="bg-orange-50 border border-orange-200 p-4 rounded-xl mb-6">
-                <p className="text-sm text-[var(--color-text)] leading-relaxed">
-                  <strong>Advanced:</strong> Override default models for specific stages in the pipeline.
-                </p>
-              </div>
-
-              {[
-                { key: 'questions', label: 'Questions Generation' },
-                { key: 'blueprint', label: 'Blueprint Generation' },
-                { key: 'refinement', label: 'Blueprint Refinement' },
-                { key: 'mockup', label: 'Mockup Generation' }
-              ].map(stage => (
-                <div key={stage.key}>
-                  <label className="block text-sm font-semibold text-[var(--color-text)] mb-2">
-                    {stage.label}
-                  </label>
-                  <select
-                    value={stageModels[stage.key] || ''}
-                    onChange={(e) => setStageModels({
-                      ...stageModels,
-                      [stage.key]: e.target.value || null
-                    })}
-                    className="input w-full"
-                  >
-                    <option value="">Default (use provider default)</option>
-                    <optgroup label="Anthropic">
-                      {AVAILABLE_MODELS.anthropic.map(m => (
-                        <option key={m.id} value={m.id}>{m.name}</option>
-                      ))}
-                    </optgroup>
-                    <optgroup label="OpenAI">
-                      {AVAILABLE_MODELS.openai.map(m => (
-                        <option key={m.id} value={m.id}>{m.name}</option>
-                      ))}
-                    </optgroup>
-                    <optgroup label="Gemini">
-                      {AVAILABLE_MODELS.gemini.map(m => (
-                        <option key={m.id} value={m.id}>{m.name}</option>
-                      ))}
-                    </optgroup>
-                  </select>
-                </div>
-              ))}
             </div>
           )}
 
           {/* Sync & Data Tab (Combined Server + Data) */}
           {activeTab === 'syncdata' && (
             <div className="space-y-6 animate-fade-in">
-              {/* Sync Mode Status */}
-              <div className={`p-6 rounded-xl border shadow-sm ${localStorage.getItem('sync_mode') === 'server'
-                ? 'bg-green-50 border-green-200'
-                : 'bg-amber-50 border-amber-200'
-                }`}>
-                <div className="flex items-center gap-3 mb-3">
-                  {localStorage.getItem('sync_mode') === 'server' ? (
-                    <>
-                      <Server className="w-5 h-5 text-green-600" />
-                      <p className="text-[var(--color-text)] font-semibold font-heading">Server Sync Enabled</p>
-                    </>
-                  ) : (
-                    <>
-                      <CloudOff className="w-5 h-5 text-amber-600" />
-                      <p className="text-[var(--color-text)] font-semibold font-heading">Local-Only Mode</p>
-                    </>
-                  )}
+              {/* Local-Only Mode Warning - Only show when NOT connected to server */}
+              {!isAuthenticated && (
+                <div className="p-6 rounded-xl border shadow-sm bg-amber-50 border-amber-200">
+                  <div className="flex items-center gap-3 mb-3">
+                    <CloudOff className="w-5 h-5 text-amber-600" />
+                    <p className="text-[var(--color-text)] font-semibold font-heading">Local-Only Mode</p>
+                  </div>
+                  <p className="text-sm text-[var(--color-text-muted)] leading-relaxed">
+                    Your data is only stored in this browser. Clearing your cache will permanently delete your data.
+                  </p>
                 </div>
-                <p className="text-sm text-[var(--color-text-muted)] leading-relaxed">
-                  {localStorage.getItem('sync_mode') === 'server'
-                    ? 'Your data is automatically synced to the server after each generation.'
-                    : 'Your data is only stored in this browser. Clearing your cache will permanently delete your data.'
-                  }
-                </p>
-              </div>
+              )}
 
               {/* Server Configuration */}
               <div className="p-6 bg-white rounded-xl border border-[var(--color-border)] shadow-sm">

@@ -318,7 +318,9 @@ app.get('/api/sync/pull', authenticateToken, async (req, res) => {
 });
 
 // Prompt Overrides Sync
-app.get('/api/prompts', authenticateToken, async (req, res) => {
+// GET is public (no auth) - allows fetching default prompts
+// POST/reset require auth (handled by global middleware)
+app.get('/api/prompts', async (req, res) => {
   try {
     const result = await pool.query('SELECT type, content, updated_at FROM prompt_overrides');
     const overrides = {};
@@ -431,7 +433,14 @@ app.post('/api/email/send', authenticateToken, async (req, res) => {
 // For now, note that existing routes are below. We can inject the middleware there.
 // Or we can just apply it globally for /api and exclude login.
 app.use('/api', (req, res, next) => {
+  // Public endpoints - no auth required
   if (req.path === '/auth/login' || req.path === '/auth/register' || req.path === '/health') return next();
+
+  // Allow GET requests to /api/prompts (read default prompts without auth)
+  // POST requests to /api/prompts still require auth
+  if (req.path === '/prompts' && req.method === 'GET') return next();
+
+  // All other /api routes require authentication
   authenticateToken(req, res, next);
 });
 
