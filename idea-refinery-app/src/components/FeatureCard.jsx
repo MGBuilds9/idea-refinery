@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Reorder, useDragControls } from 'framer-motion';
 import { GripVertical, Layers, CheckCircle2 } from 'lucide-react';
 
-export default function FeatureCard({ feature, isDragging }) {
+// Optimized: Wrapped in React.memo to prevent unnecessary re-renders during drag operations or parent updates
+const FeatureCard = memo(function FeatureCard({ feature, isDragging }) {
   const controls = useDragControls();
 
   const complexityColors = {
@@ -65,4 +66,6 @@ export default function FeatureCard({ feature, isDragging }) {
       </div>
     </div>
   );
-}
+});
+
+export default FeatureCard;
