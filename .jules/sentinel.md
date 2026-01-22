@@ -8,3 +8,8 @@
 **Vulnerability:** Missing standard security headers (HSTS, X-Frame-Options, No-Sniff) exposed the application to clickjacking, MIME-sniffing, and downgrade attacks. Also leaked "X-Powered-By: Express".
 **Learning:** Even simple backend proxies need basic hardening. Standard middleware like `helmet` provides significant "defense in depth" with minimal effort.
 **Prevention:** Always include `helmet` (or equivalent) in Express apps by default.
+
+## 2026-01-22 - Missing Strict Rate Limiting on Auth
+**Vulnerability:** Authentication endpoints were protected only by a generous global rate limiter (5000 req/15m), making them susceptible to brute-force attacks. Documentation falsely claimed strict limiting existed.
+**Learning:** Documentation and "memory" about security controls can be misleading. Always verify configuration in code. Also, backend dependencies (like `dotenv`) must be explicitly installed even if the code runs in some environments.
+**Prevention:** Use specific, strict rate limiters for auth endpoints separate from global API limits. Ensure all imports are listed in `package.json`.
