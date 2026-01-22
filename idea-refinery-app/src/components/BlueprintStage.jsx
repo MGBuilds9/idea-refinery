@@ -1,18 +1,16 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, memo } from 'react';
 import { Reorder } from 'framer-motion';
 import { FileText, MessageSquare, Check, Send, Sparkles, Globe, Copy, X, Layers } from 'lucide-react';
 import ContextIndicator from './ContextIndicator';
 import FeatureCard from './FeatureCard';
 
-export default function BlueprintStage({ 
+const BlueprintStage = memo(function BlueprintStage({
   blueprint, 
   conversation, 
   onRefine, 
   onGenerateMockup, 
   onStartOver, 
   loading,
-  refinementInput,
-  setRefinementInput,
   currentTab = 'preview', // 'preview', 'chat', or 'features'
   setTab,
   chatHistory = [],
@@ -20,6 +18,7 @@ export default function BlueprintStage({
   onSave
 }) {
   const chatEndRef = useRef(null);
+  const [input, setInput] = useState('');
   
   // Local state for features to allow smooth dragging before save
   const [localFeatures, setLocalFeatures] = useState([]);
@@ -241,16 +240,24 @@ export default function BlueprintStage({
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    value={refinementInput}
-                    onChange={(e) => setRefinementInput(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && !loading && onRefine()}
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter' && !loading && input.trim()) {
+                        onRefine(input);
+                        setInput('');
+                      }
+                    }}
                     placeholder="Request changes, additions, or clarifications..."
                     className="flex-1 bg-slate-800 border border-slate-600 rounded px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition-colors text-sm font-sans"
                     disabled={loading}
                   />
                   <button
-                    onClick={onRefine}
-                    disabled={!refinementInput.trim() || loading}
+                    onClick={() => {
+                       onRefine(input);
+                       setInput('');
+                    }}
+                    disabled={!input.trim() || loading}
                     className="bg-amber-500 hover:bg-amber-600 disabled:bg-slate-700 disabled:text-slate-500 text-slate-900 px-6 py-3 rounded transition-all flex items-center gap-2"
                   >
                     <Send className="w-4 h-4" />
@@ -340,4 +347,6 @@ export default function BlueprintStage({
       )}
     </div>
   );
-}
+});
+
+export default BlueprintStage;
