@@ -1,13 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Send, Sparkles } from 'lucide-react';
 import PromptSelector from './PromptSelector';
 
 export default function InputStage({ idea, setIdea, onNext, selectedPersona, setSelectedPersona }) {
   const [isFocused, setIsFocused] = useState(false);
+  // ⚡ Bolt Optimization: Use local state for high-frequency input to prevent global re-renders
+  const [localIdea, setLocalIdea] = useState(idea);
+
+  // Sync local state when prop changes (e.g. history load)
+  useEffect(() => {
+    setLocalIdea(idea);
+  }, [idea]);
 
   const handleSubmit = async () => {
-    if (!idea.trim()) return;
-    onNext();
+    if (!localIdea.trim()) return;
+    // Update global state and pass override to onNext immediately
+    setIdea(localIdea);
+    onNext(localIdea);
+  };
+
+  const handleBlur = () => {
+    setIsFocused(false);
+    // Sync to global state on blur
+    setIdea(localIdea);
   };
 
   const handleKeyDown = (e) => {
@@ -46,11 +61,11 @@ export default function InputStage({ idea, setIdea, onNext, selectedPersona, set
             {/* Card Container */}
             <div className="relative bg-[var(--color-surface)] rounded-2xl p-6 md:p-8 border border-[var(--color-border)] shadow-[var(--shadow-md)] transition-all duration-200 hover:shadow-[var(--shadow-lg)]">
               <textarea
-                value={idea}
-                onChange={(e) => setIdea(e.target.value)}
+                value={localIdea}
+                onChange={(e) => setLocalIdea(e.target.value)}
                 onKeyDown={handleKeyDown}
                 onFocus={() => setIsFocused(true)}
-                onBlur={() => setIsFocused(false)}
+                onBlur={handleBlur}
                 placeholder="What are you building today?"
                 aria-label="Idea description"
                 className="w-full bg-transparent border-none focus:ring-0 text-xl md:text-2xl font-[var(--font-body)] text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] resize-none min-h-[120px] md:min-h-[160px] leading-relaxed selection:bg-[var(--color-primary)]/20 selection:text-[var(--color-text)] outline-none"
@@ -70,9 +85,9 @@ export default function InputStage({ idea, setIdea, onNext, selectedPersona, set
 
                 <button
                   onClick={handleSubmit}
-                  disabled={!idea.trim()}
-                  aria-disabled={!idea.trim()}
-                  title={!idea.trim() ? "Please describe your idea first" : "Generate blueprint (Cmd+Enter)"}
+                  disabled={!localIdea.trim()}
+                  aria-disabled={!localIdea.trim()}
+                  title={!localIdea.trim() ? "Please describe your idea first" : "Generate blueprint (Cmd+Enter)"}
                   className="btn-primary cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <span className="font-semibold">Refine</span>

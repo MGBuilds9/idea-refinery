@@ -134,17 +134,20 @@ export function useProjectState() {
     return true;
   };
 
-  const handleGenerateQuestions = async () => {
+  const handleGenerateQuestions = async (ideaOverride) => {
     if (!checkApiKey()) return;
     setLoading(true);
     setLoadingMessage('Architect Agent: Structuring your idea...');
     
+    // Use override if provided (e.g. from InputStage local state), otherwise use state
+    const currentIdea = typeof ideaOverride === 'string' ? ideaOverride : idea;
+
     try {
       const orchestrator = createOrchestrator();
       if (!orchestrator) throw new Error('Failed to initialize AI agent');
 
       // Run Architect + Critic + Gap Analysis
-      const result = await orchestrator.refine(idea);
+      const result = await orchestrator.refine(currentIdea);
       
       setIdeaSpec(result.ideaSpec);
       
@@ -155,7 +158,7 @@ export function useProjectState() {
         setAnswers(generatedQuestions.reduce((acc, _, i) => ({ ...acc, [i]: '' }), {}));
         
         await saveProgress({ 
-          idea, 
+          idea: currentIdea,
           questions: generatedQuestions,
           ideaSpec: result.ideaSpec 
         });
@@ -168,7 +171,7 @@ export function useProjectState() {
         setMasterPrompt(''); // v1.5 prompt is generated on export, not here
         
         await saveProgress({ 
-          idea, 
+          idea: currentIdea,
           questions: [],
           ideaSpec: result.ideaSpec,
           blueprint: markdown
