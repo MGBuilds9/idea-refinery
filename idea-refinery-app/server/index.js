@@ -129,8 +129,18 @@ const apiLimiter = rateLimit({
   message: { error: 'Too many requests, please try again later.' }
 });
 
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Limit each IP to 5 login/register attempts per windowMs
+  message: { error: 'Too many login attempts, please try again after 15 minutes.' }
+});
+
 // Apply to all API routes
 app.use('/api/', apiLimiter);
+
+// Apply strict limit to auth routes
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
 
 // Authentication Middleware
 const authenticateToken = (req, res, next) => {
