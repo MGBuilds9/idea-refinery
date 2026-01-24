@@ -8,3 +8,8 @@
 **Vulnerability:** Missing standard security headers (HSTS, X-Frame-Options, No-Sniff) exposed the application to clickjacking, MIME-sniffing, and downgrade attacks. Also leaked "X-Powered-By: Express".
 **Learning:** Even simple backend proxies need basic hardening. Standard middleware like `helmet` provides significant "defense in depth" with minimal effort.
 **Prevention:** Always include `helmet` (or equivalent) in Express apps by default.
+
+## 2024-05-24 - Rate Limiting Discrepancy
+**Vulnerability:** Documented strict rate limiting (5 req/15min) was effectively missing in code (only generic 5000 req/15min existed).
+**Learning:** Security controls in documentation/memory must be verified in code. Do not trust "it should be there".
+**Prevention:** Use automated tests to verify specific security controls (like hitting auth endpoints 10 times to verify block).

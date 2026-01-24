@@ -132,6 +132,16 @@ const apiLimiter = rateLimit({
 // Apply to all API routes
 app.use('/api/', apiLimiter);
 
+// Stricter rate limiting for authentication (Brute Force Protection)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // limit each IP to 5 requests per windowMs
+  message: { error: 'Too many login attempts, please try again later.' }
+});
+
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
+
 // Authentication Middleware
 const authenticateToken = (req, res, next) => {
   // Allow login/register/health without token
