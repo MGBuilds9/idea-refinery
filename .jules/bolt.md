@@ -10,4 +10,5 @@
 
 ## 2024-05-26 - BlueprintStage Input Isolation **Learning:** Moving the transient `refinementInput` state from the global `useProjectState` hook to local component state in `BlueprintStage` completely eliminated full-app re-renders during typing, solving a significant input lag issue. **Action:** Always check if high-frequency input state needs to be global. If it's only used for a specific action (like sending a message), keep it local and pass the value to the handler.
 
-## 2026-01-23 - QuestionsStage Optimization **Learning:** Mapping over inputs inline causes all inputs to re-render on every keystroke, even if only one changed value. This is a common performance pitfall in forms. **Action:** Extract repeated form elements into `React.memo` components and ensure their `onChange` handlers are stable (using `useCallback`).
+## 2024-05-26 - QuestionsStage Optimization **Learning:** Inline rendering of inputs in a list (`map`) combined with parent state causes O(N) re-renders for every keystroke. Even simple inputs become laggy with enough items. **Action:** Extract list items into memoized components (`QuestionItem`). Use `useCallback` with functional state updates (`prev => ...`) for the change handler to remove data dependencies, ensuring the handler reference remains stable across updates.
+

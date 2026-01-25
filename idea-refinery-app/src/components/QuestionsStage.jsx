@@ -3,6 +3,8 @@ import { FileText, ArrowRight, ArrowLeft } from 'lucide-react';
 import QuestionItem from './QuestionItem';
 
 export default function QuestionsStage({ questions, answers, setAnswers, onNext, onBack, loading }) {
+  // ⚡ Bolt: Stable handler to ensure QuestionItem doesn't re-render unless its specific props change.
+  // Optimization: Reduces re-renders from O(n) to O(1) per keystroke in the list.
   const handleAnswerChange = useCallback((index, value) => {
     setAnswers(prev => ({ ...prev, [index]: value }));
   }, [setAnswers]);
@@ -24,10 +26,10 @@ export default function QuestionsStage({ questions, answers, setAnswers, onNext,
           {questions.map((question, i) => (
             <QuestionItem
               key={i}
-              index={i}
               question={question}
-              answer={answers[i]}
-              onChange={handleAnswerChange}
+              answer={answers[i] || ''}
+              index={i}
+              onAnswerChange={handleAnswerChange}
             />
           ))}
         </div>
