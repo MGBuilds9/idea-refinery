@@ -31,7 +31,6 @@ export function useProjectState() {
   // Interaction State
   const [conversation, setConversation] = useState([]);
   const [chatHistory, setChatHistory] = useState([]); 
-  const [refinementInput, setRefinementInput] = useState('');
   const [blueprintTab, setBlueprintTab] = useState('preview');
   const [selectedPersona, setSelectedPersona] = useState('balanced');
   const [publicBlueprintId, setPublicBlueprintId] = useState(null);
@@ -92,7 +91,7 @@ export function useProjectState() {
   }, [loadHistory]);
 
   // Save helper
-  const saveProgress = async (updates) => {
+  const saveProgress = useCallback(async (updates) => {
     try {
         const fullData = {
             id: currentDbId,
@@ -121,10 +120,10 @@ export function useProjectState() {
     } catch (e) {
         console.error('Failed to auto-save:', e);
     }
-  };
+  }, [currentDbId, idea, questions, answers, blueprint, htmlMockup, masterPrompt, ideaSpec, chatHistory, loadHistory]);
 
   // Helper to ensure API key exists
-  const checkApiKey = (p) => {
+  const checkApiKey = useCallback((p) => {
     const provider = p || llm.getDefaultProvider();
     if (!llm.getApiKey(provider)) {
       setActiveView('settings');
@@ -132,7 +131,7 @@ export function useProjectState() {
       return false;
     }
     return true;
-  };
+  }, []);
 
   const handleGenerateQuestions = async (ideaOverride) => {
     if (!checkApiKey()) return;
@@ -239,19 +238,19 @@ export function useProjectState() {
     }
   };
 
-  const handleRefineBlueprint = async () => {
-    if (!refinementInput.trim()) return;
+  const handleRefineBlueprint = useCallback(async (inputContent) => {
+    if (!inputContent?.trim()) return;
     if (!checkApiKey()) return;
     
-    const userMsg = { role: 'user', content: refinementInput };
+    const userMsg = { role: 'user', content: inputContent };
     setConversation(prev => [...prev, userMsg]);
-    setRefinementInput('');
+    // setRefinementInput(''); // Removed: handled locally in component
     setLoading(true);
     setLoadingMessage('Refining blueprint...');
 
     try {
-      const { system } = PromptService.get('refine', { refinementInput });
-      const prompt = `CURRENT BLUEPRINT:\n${blueprint}\n\nUSER REQUEST: ${refinementInput}`;
+      const { system } = PromptService.get('refine', { refinementInput: inputContent });
+      const prompt = `CURRENT BLUEPRINT:\n${blueprint}\n\nUSER REQUEST: ${inputContent}`;
       const model = llm.getModelForStage('refinement');
 
       const currentProvider = llm.getDefaultProvider();
@@ -291,7 +290,7 @@ export function useProjectState() {
       setLoading(false);
       setLoadingMessage('');
     }
-  };
+  }, [blueprint, chatHistory, checkApiKey, saveProgress]);
 
   const handleGenerateMockup = async () => {
     if (!checkApiKey()) return;
@@ -349,6 +348,7 @@ export function useProjectState() {
             setIdeaSpec(null);
             setCurrentDbId(null);
             setStage('input');
+            // setRefinementInput(''); // Removed
           } else {
               return; // Cancel switch
           }
@@ -378,7 +378,6 @@ export function useProjectState() {
       ideaSpec, setIdeaSpec,
       conversation, setConversation,
       chatHistory, setChatHistory,
-      refinementInput, setRefinementInput,
       blueprintTab, setBlueprintTab,
       selectedPersona, setSelectedPersona,
       publicBlueprintId, setPublicBlueprintId,

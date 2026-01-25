@@ -32,7 +32,7 @@ function App() {
     activeView, stage, setStage, loading, loadingMessage,
     historyItems, idea, setIdea, questions, answers, setAnswers,
     blueprint, masterPrompt, htmlMockup, ideaSpec, conversation,
-    chatHistory, refinementInput, setRefinementInput, blueprintTab, setBlueprintTab,
+    chatHistory, blueprintTab, setBlueprintTab,
     selectedPersona, setSelectedPersona, publicBlueprintId, initializing
   } = projectState;
 
@@ -285,8 +285,6 @@ function App() {
                             onGenerateMockup={handleGenerateMockup}
                             onStartOver={() => setStage('input')}
                             loading={loading}
-                            refinementInput={refinementInput}
-                            setRefinementInput={setRefinementInput}
                             currentTab={blueprintTab}
                             setTab={setBlueprintTab}
                             chatHistory={chatHistory}
