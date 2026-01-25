@@ -13,3 +13,8 @@
 **Vulnerability:** Authentication endpoints (`/api/auth/login`, `/api/auth/register`) were sharing the global rate limit (5000 req/15min) instead of having a strict limit, enabling potential brute-force attacks. Documentation falsely claimed strict limiting existed.
 **Learning:** High-level rate limiters are insufficient for sensitive endpoints. Always verify that "protected" endpoints actually have the specific protections applied in code. Also, backend dependencies (like `dotenv`) must be explicitly installed even if the code runs in some environments.
 **Prevention:** Explicitly define and apply strict rate limiters for authentication routes, separate from global API limiters. Use automated tests to verify these specific security controls. Ensure all imports are listed in `package.json`.
+
+## 2026-02-18 - Secure Default vs Fail Secure (JWT Secret)
+**Vulnerability:** The application fell back to a hardcoded string `dev-secret-key-change-in-prod` for `JWT_SECRET`, making production deployments vulnerable if the env var was missed.
+**Learning:** Hardcoded fallbacks for secrets are dangerous, even if intended for dev. Developers often forget to override them in prod. It's better to auto-generate a random secret for dev (convenience) but strictly fail in production if missing (security).
+**Prevention:** Never provide a hardcoded string as a fallback for a secret. Use `process.env.NODE_ENV` to enforce strict checks in production, and use `crypto.randomBytes` for temporary development secrets.

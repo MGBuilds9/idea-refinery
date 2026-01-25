@@ -5,9 +5,26 @@ import cors from 'cors';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { Resend } from 'resend';
+import crypto from 'crypto';
 import { pool } from './db.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key-change-in-prod';
+let JWT_SECRET = process.env.JWT_SECRET;
+
+// Security: Enforce secure JWT_SECRET in production
+if (!JWT_SECRET) {
+  if (process.env.NODE_ENV === 'production') {
+    console.error('❌ FATAL: JWT_SECRET is not defined in production environment!');
+    process.exit(1);
+  } else {
+    console.warn('⚠️  WARNING: JWT_SECRET is not defined. Using a random temporary secret for development.');
+    console.warn('⚠️  Login sessions will be invalidated on server restart.');
+    JWT_SECRET = crypto.randomBytes(64).toString('hex');
+  }
+} else if (process.env.NODE_ENV === 'production' &&
+          (JWT_SECRET === 'dev-secret-key-change-in-prod' || JWT_SECRET === 'change-this-to-a-secure-random-string')) {
+  console.error('❌ FATAL: You are using a default insecure JWT_SECRET in production! Please change it.');
+  process.exit(1);
+}
 
 import { DEFAULT_PROMPTS } from './default_prompts.js';
 import { AgentOrchestrator } from './services/AgentOrchestrator.js';
