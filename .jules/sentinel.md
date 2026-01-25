@@ -12,4 +12,4 @@
 ## 2026-01-22 - Missing Strict Rate Limiting on Auth
 **Vulnerability:** Authentication endpoints (`/api/auth/login`, `/api/auth/register`) were sharing the global rate limit (5000 req/15min) instead of having a strict limit, enabling potential brute-force attacks. Documentation falsely claimed strict limiting existed.
 **Learning:** High-level rate limiters are insufficient for sensitive endpoints. Always verify that "protected" endpoints actually have the specific protections applied in code. Also, backend dependencies (like `dotenv`) must be explicitly installed even if the code runs in some environments.
-**Prevention:** Explicitly define and apply strict rate limiters for authentication routes, separate from global API limiters. Ensure all imports are listed in `package.json`.
+**Prevention:** Explicitly define and apply strict rate limiters for authentication routes, separate from global API limiters. Use automated tests to verify these specific security controls. Ensure all imports are listed in `package.json`.
