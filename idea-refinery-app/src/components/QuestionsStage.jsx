@@ -24,13 +24,10 @@ export default function QuestionsStage({ questions, answers, setAnswers, onNext,
           {questions.map((question, i) => (
             <QuestionItem
               key={i}
-            <QuestionItem
-              key={i}
               index={i}
               question={question}
               answer={answers[i]}
               onChange={handleAnswerChange}
-            />
             />
           ))}
         </div>
