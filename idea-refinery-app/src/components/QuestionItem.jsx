@@ -1,5 +1,6 @@
 import React, { memo } from "react";
 
+// Memoized to prevent re-renders of all inputs when one answer changes
 const QuestionItem = memo(function QuestionItem({
   index,
   question,

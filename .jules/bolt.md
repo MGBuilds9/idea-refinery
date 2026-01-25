@@ -8,8 +8,6 @@
 
 ## 2024-05-25 - BlueprintStage List Optimization **Learning:** `BlueprintStage` couples high-frequency chat input state with a heavy `framer-motion` list (`FeatureCard`). Without `React.memo`, typing in the chat triggers re-renders of all feature cards, causing input lag. **Action:** Memoize all list item components (`FeatureCard`) that are rendered alongside interactive inputs, especially when using animation libraries like `framer-motion`.
 
-## 2025-02-18 - QuestionsStage Optimization **Learning:** In lists of controlled inputs (like `QuestionsStage`), defining handlers inline inside `map` breaks memoization, causing O(N) re-renders on every keystroke. **Action:** Extract the input item to a `React.memo` component (`QuestionItem`) and pass a stable `useCallback` handler that accepts an index.
-
-## 2024-05-26 - Mapped Input Optimization **Learning:** Large forms with mapped inputs (like `QuestionsStage`) cause O(N) re-renders on every keystroke if items aren't memoized. **Action:** Extract mapped inputs into `React.memo` components and pass stable `useCallback` handlers.
-
 ## 2024-05-26 - BlueprintStage Input Isolation **Learning:** Moving the transient `refinementInput` state from the global `useProjectState` hook to local component state in `BlueprintStage` completely eliminated full-app re-renders during typing, solving a significant input lag issue. **Action:** Always check if high-frequency input state needs to be global. If it's only used for a specific action (like sending a message), keep it local and pass the value to the handler.
+
+## 2026-01-23 - QuestionsStage Optimization **Learning:** Mapping over inputs inline causes all inputs to re-render on every keystroke, even if only one changed value. This is a common performance pitfall in forms. **Action:** Extract repeated form elements into `React.memo` components and ensure their `onChange` handlers are stable (using `useCallback`).
