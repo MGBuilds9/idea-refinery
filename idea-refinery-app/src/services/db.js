@@ -88,7 +88,7 @@ db.version(4).stores({
 });
 
 export async function getAuthToken() {
-  return localStorage.getItem('authToken');
+  return localStorage.getItem('auth_token');
 }
 
 export async function setSyncToken(token) {

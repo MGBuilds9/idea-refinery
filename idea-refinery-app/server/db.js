@@ -48,6 +48,35 @@ const initDb = async () => {
           view_count INT DEFAULT 0
         );
         CREATE INDEX IF NOT EXISTS idx_public_blueprints_id ON public_blueprints(id);
+
+        -- Blueprint v1.5 Relational Schema
+        CREATE TABLE IF NOT EXISTS projects (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          user_id UUID REFERENCES users(id) NOT NULL,
+          name TEXT NOT NULL,
+          description TEXT,
+          status TEXT CHECK (status IN ('draft', 'refined', 'exported')) DEFAULT 'draft',
+          created_at TIMESTAMPTZ DEFAULT now(),
+          updated_at TIMESTAMPTZ DEFAULT now()
+        );
+
+        CREATE TABLE IF NOT EXISTS features (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
+          title TEXT NOT NULL,
+          description TEXT,
+          priority TEXT CHECK (priority IN ('low', 'medium', 'high')),
+          status TEXT DEFAULT 'pending'
+        );
+
+        CREATE TABLE IF NOT EXISTS artifacts (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
+          version INT NOT NULL,
+          type TEXT CHECK (type IN ('blueprint_md', 'cursor_rules', 'mockup_html')),
+          content TEXT NOT NULL,
+          created_at TIMESTAMPTZ DEFAULT now()
+        );
       `);
       
       // Seed default admin if no users exist

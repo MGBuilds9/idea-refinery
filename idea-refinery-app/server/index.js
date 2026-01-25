@@ -10,6 +10,7 @@ import { pool } from './db.js';
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key-change-in-prod';
 
 import { DEFAULT_PROMPTS } from './default_prompts.js';
+import { AgentOrchestrator } from './services/AgentOrchestrator.js';
 
 // Seeding Default Prompts
 const seedPrompts = async () => {
@@ -129,18 +130,10 @@ const apiLimiter = rateLimit({
   message: { error: 'Too many requests, please try again later.' }
 });
 
-<<<<<<< HEAD
-
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5, // Strict limit for auth endpoints: 5 attempts per 15 minutes
   message: { error: 'Too many login attempts, please try again after 15 minutes.' }
-=======
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // Strict limit for auth endpoints: 5 attempts per 15 mins
-  message: { error: 'Too many login attempts, please try again later.' }
->>>>>>> origin/sentinel/rate-limit-auth-1156576316386844635
 });
 
 // Apply to all API routes
@@ -243,6 +236,39 @@ app.post('/api/auth/change-password', authenticateToken, async (req, res) => {
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Error changing password' });
+  }
+});
+
+// Idea Refinery v1.5 - Multi-Agent Orchestration
+app.post('/api/refine', authenticateToken, async (req, res) => {
+  const { idea, provider, apiKey, model } = req.body;
+
+  if (!idea) return res.status(400).json({ error: 'Idea is required' });
+  if (!provider || !apiKey) return res.status(400).json({ error: 'AI Provider and API Key are required' });
+
+  try {
+    console.log(`🚀 Refining idea with ${provider}...`);
+    const orchestrator = new AgentOrchestrator({ provider, apiKey, model });
+    const result = await orchestrator.refineIdea(idea);
+    
+    // Increment version if it's an update? For now, just return
+    res.json(result);
+  } catch (error) {
+    console.error('Refinement error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/export', authenticateToken, async (req, res) => {
+  const { spec, design, provider, apiKey } = req.body;
+
+  try {
+    const orchestrator = new AgentOrchestrator({ provider, apiKey });
+    const artifacts = await orchestrator.generateArtifacts(spec, design);
+    res.json(artifacts);
+  } catch (error) {
+    console.error('Export error:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 

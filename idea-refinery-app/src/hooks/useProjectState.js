@@ -27,6 +27,7 @@ export function useProjectState() {
   const [masterPrompt, setMasterPrompt] = useState('');
   const [htmlMockup, setHtmlMockup] = useState('');
   const [ideaSpec, setIdeaSpec] = useState(null);
+  const [proposedSpec, setProposedSpec] = useState(null);
   
   // Interaction State
   const [conversation, setConversation] = useState([]);
@@ -35,6 +36,7 @@ export function useProjectState() {
   const [selectedPersona, setSelectedPersona] = useState('balanced');
   const [publicBlueprintId, setPublicBlueprintId] = useState(null);
   const [initializing, setInitializing] = useState(true);
+  const [, setIsExportModalOpen] = useState(false);
 
   // Check for public share URL on mount
   useEffect(() => {
@@ -244,45 +246,78 @@ export function useProjectState() {
     
     const userMsg = { role: 'user', content: inputContent };
     setConversation(prev => [...prev, userMsg]);
-    // setRefinementInput(''); // Removed: handled locally in component
     setLoading(true);
     setLoadingMessage('Refining blueprint...');
 
     try {
-      const { system } = PromptService.get('refine', { refinementInput: inputContent });
-      const prompt = `CURRENT BLUEPRINT:\n${blueprint}\n\nUSER REQUEST: ${inputContent}`;
-      const model = llm.getModelForStage('refinement');
+      // If we have an IdeaSpec, use the Relational Refinement (v1.5)
+      if (ideaSpec) {
+        const serverUrl = localStorage.getItem('server_url') || 
+          (window.location.hostname === 'localhost' ? 'http://localhost:3001' : window.location.origin);
+        
+        const res = await fetch(`${serverUrl}/api/refine`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+          },
+          body: JSON.stringify({
+            idea: `CURRENT SPEC: ${JSON.stringify(ideaSpec)}\n\nUSER REQUEST: ${inputContent}`,
+            provider: llm.getDefaultProvider(),
+            apiKey: llm.getApiKey(llm.getDefaultProvider()),
+            model: llm.getModelForStage('refinement')
+          })
+        });
 
-      const currentProvider = llm.getDefaultProvider();
-      const responseText = await llm.generate(currentProvider, {
-          system, 
-          prompt,
-          model,
-          maxTokens: 8000,
-          history: chatHistory // Pass history for optimization
-      });
-      
-      const sections = responseText.split('## Master Takeoff Prompt');
-      setBlueprint(responseText);
-      setMasterPrompt(sections[1] ? sections[1].trim() : '');
-      
-      const assistantMsg = {
-        role: 'assistant',
-        content: responseText,
-        type: 'response',
-        timestamp: Date.now()
-      };
-      
-      setConversation(prev => [...prev, assistantMsg]);
-      
-      const newChatHistory = [...chatHistory, { ...userMsg, timestamp: Date.now() - 1000 }, assistantMsg];
-      setChatHistory(newChatHistory);
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
 
-      await saveProgress({ 
-         blueprint: responseText, 
-         masterPrompt: sections[1] ? sections[1].trim() : '',
-         chatHistory: newChatHistory
-      });
+        // Show the diff
+        setProposedSpec(data.spec);
+        
+        const assistantMsg = {
+          role: 'assistant',
+          content: 'I have proposed some refinements based on your request. Please review the diff.',
+          type: 'proposal',
+          timestamp: Date.now()
+        };
+        setConversation(prev => [...prev, assistantMsg]);
+      } else {
+        // Legacy refinement
+        const { system } = PromptService.get('refine', { refinementInput: inputContent });
+        const prompt = `CURRENT BLUEPRINT:\n${blueprint}\n\nUSER REQUEST: ${inputContent}`;
+        const model = llm.getModelForStage('refinement');
+
+        const currentProvider = llm.getDefaultProvider();
+        const responseText = await llm.generate(currentProvider, {
+            system, 
+            prompt,
+            model,
+            maxTokens: 8000,
+            history: chatHistory 
+        });
+        
+        const sections = responseText.split('## Master Takeoff Prompt');
+        setBlueprint(responseText);
+        setMasterPrompt(sections[1] ? sections[1].trim() : '');
+        
+        const assistantMsg = {
+          role: 'assistant',
+          content: responseText,
+          type: 'response',
+          timestamp: Date.now()
+        };
+        
+        setConversation(prev => [...prev, assistantMsg]);
+        const newChatHistory = [...chatHistory, { ...userMsg, timestamp: Date.now() - 1000 }, assistantMsg];
+        setChatHistory(newChatHistory);
+
+        await saveProgress({ 
+           blueprint: responseText, 
+           masterPrompt: sections[1] ? sections[1].trim() : '',
+           chatHistory: newChatHistory
+        });
+      }
 
     } catch (e) {
       setConversation(prev => [...prev, { role: 'assistant', content: `Error: ${e.message}`, type: 'error' }]);
@@ -290,7 +325,25 @@ export function useProjectState() {
       setLoading(false);
       setLoadingMessage('');
     }
-  }, [blueprint, chatHistory, checkApiKey, saveProgress]);
+  }, [blueprint, chatHistory, checkApiKey, saveProgress, ideaSpec]);
+
+  const handleAcceptRefinement = async () => {
+    if (!proposedSpec) return;
+    const newMarkdown = compileToMarkdown(proposedSpec);
+    setIdeaSpec(proposedSpec);
+    setBlueprint(newMarkdown);
+    setProposedSpec(null);
+    await saveProgress({ ideaSpec: proposedSpec, blueprint: newMarkdown });
+  };
+
+  const handleExportPackage = async (options) => {
+    if (!ideaSpec) return;
+    // v1.5 Export all
+    if (options.blueprint) ExportService.downloadFile('BLUEPRINT.md', blueprint);
+    if (options.cursorRules) ExportService.downloadFile('.cursorrules', ExportService.toCursorRules(ideaSpec));
+    if (options.implementationPlan) ExportService.downloadFile('implementation_plan.md', ExportService.toImplementationPlan(ideaSpec));
+    if (options.mockupHtml) ExportService.downloadFile('mockup.html', htmlMockup);
+  };
 
   const handleGenerateMockup = async () => {
     if (!checkApiKey()) return;
@@ -391,6 +444,10 @@ export function useProjectState() {
       handleGenerateQuestions,
       handleGenerateBlueprint,
       handleRefineBlueprint,
+      handleAcceptRefinement,
+      setProposedSpec,
+      setIsExportModalOpen,
+      handleExportPackage,
       handleGenerateMockup,
       handleViewChange
     }

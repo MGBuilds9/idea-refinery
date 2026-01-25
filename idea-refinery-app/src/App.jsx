@@ -289,6 +289,12 @@ function App() {
                             setTab={setBlueprintTab}
                             chatHistory={chatHistory}
                             ideaSpec={ideaSpec}
+                            proposedSpec={projectState.proposedSpec}
+                            onAcceptRefinement={projectActions.handleAcceptRefinement}
+                            onRejectRefinement={() => projectActions.setProposedSpec(null)}
+                            isExportModalOpen={projectState.isExportModalOpen}
+                            setIsExportModalOpen={projectActions.setIsExportModalOpen}
+                            onExportPackage={projectActions.handleExportPackage}
                             onSave={projectActions.saveProgress}
                           />
                         </Suspense>

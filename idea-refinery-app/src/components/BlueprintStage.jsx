@@ -3,6 +3,8 @@ import { Reorder } from 'framer-motion';
 import { FileText, MessageSquare, Check, Send, Sparkles, Globe, Copy, X, Layers } from 'lucide-react';
 import ContextIndicator from './ContextIndicator';
 import FeatureCard from './FeatureCard';
+import DiffViewer from './DiffViewer';
+import ExportModal from './ExportModal';
 
 const BlueprintStage = memo(function BlueprintStage({
   blueprint, 
@@ -11,10 +13,16 @@ const BlueprintStage = memo(function BlueprintStage({
   onGenerateMockup, 
   onStartOver, 
   loading,
-  currentTab = 'preview', // 'preview', 'chat', or 'features'
+  currentTab = 'preview', 
   setTab,
   chatHistory = [],
   ideaSpec,
+  proposedSpec,
+  onAcceptRefinement,
+  onRejectRefinement,
+  isExportModalOpen,
+  setIsExportModalOpen,
+  onExportPackage,
   onSave
 }) {
   const chatEndRef = useRef(null);
@@ -278,6 +286,15 @@ const BlueprintStage = memo(function BlueprintStage({
           START OVER
         </button>
 
+        <button
+          onClick={() => setIsExportModalOpen(true)}
+          disabled={loading || !ideaSpec}
+          className="bg-purple-600 hover:bg-purple-700 disabled:bg-slate-700 disabled:text-slate-500 text-white font-medium px-6 py-4 rounded-lg transition-all flex items-center justify-center gap-2 group font-mono"
+        >
+          <Sparkles className="w-4 h-4" />
+          EXPORT
+        </button>
+
         {/* Publish Button */}
         <button
           onClick={handlePublish}
@@ -295,9 +312,29 @@ const BlueprintStage = memo(function BlueprintStage({
           className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-slate-700 disabled:text-slate-500 text-white font-medium py-4 rounded-lg transition-all flex items-center justify-center gap-2 group font-mono"
         >
           <Check className="w-4 h-4" />
-          APPROVE & GENERATE MOCKUP
+          APPROVE & MOCKUP
         </button>
       </div>
+
+      {/* Overlays & Modals */}
+      {proposedSpec && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-4xl max-h-[90vh] overflow-hidden rounded-2xl shadow-2xl">
+            <DiffViewer 
+              oldSpec={ideaSpec} 
+              newSpec={proposedSpec} 
+              onAccept={onAcceptRefinement} 
+              onReject={onRejectRefinement} 
+            />
+          </div>
+        </div>
+      )}
+
+      <ExportModal 
+        isOpen={isExportModalOpen} 
+        onClose={() => setIsExportModalOpen(false)} 
+        onExport={onExportPackage}
+      />
 
       {/* Publish Success Modal */}
       {showPublishModal && (
