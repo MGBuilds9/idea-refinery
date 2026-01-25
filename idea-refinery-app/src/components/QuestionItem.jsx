@@ -1,7 +1,5 @@
 import React, { memo } from 'react';
 
-// ⚡ Bolt: Memoized component to prevent re-renders of siblings when typing in other inputs.
-// Only re-renders if the specific answer for this item changes.
 const QuestionItem = memo(function QuestionItem({ question, answer, index, onAnswerChange }) {
   return (
     <div className="space-y-3">
@@ -18,5 +16,7 @@ const QuestionItem = memo(function QuestionItem({ question, answer, index, onAns
     </div>
   );
 });
+
+QuestionItem.displayName = 'QuestionItem';
 
 export default QuestionItem;
