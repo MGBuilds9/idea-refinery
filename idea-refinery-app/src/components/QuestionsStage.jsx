@@ -1,7 +1,13 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { FileText, ArrowRight, ArrowLeft } from 'lucide-react';
+import QuestionItem from './QuestionItem';
 
 export default function QuestionsStage({ questions, answers, setAnswers, onNext, onBack, loading }) {
+  // Optimized: Stable callback to ensure child QuestionItem components don't re-render unnecessarily
+  const handleAnswerChange = useCallback((index, value) => {
+    setAnswers(prev => ({ ...prev, [index]: value }));
+  }, [setAnswers]);
+
   return (
     <div className="space-y-8 animate-fade-in">
       <div className="glass-panel rounded-2xl p-8">
@@ -17,18 +23,13 @@ export default function QuestionsStage({ questions, answers, setAnswers, onNext,
 
         <div className="space-y-6">
           {questions.map((question, i) => (
-            <div key={i} className="space-y-3">
-              <label className="block text-sm text-zinc-300 font-medium">
-                <span className="text-[var(--color-gold-dim)] font-mono mr-2">{String(i + 1).padStart(2, '0')}.</span>
-                {question}
-              </label>
-              <textarea
-                value={answers[i] || ''}
-                onChange={(e) => setAnswers({ ...answers, [i]: e.target.value })}
-                className="w-full h-28 bg-[var(--color-bg-surface)] border border-[var(--glass-border)] rounded-xl px-5 py-4 text-white placeholder-zinc-600 focus:outline-none focus:border-[var(--color-gold-subtle)] focus:ring-1 focus:ring-[var(--color-gold-subtle)] transition-all resize-none text-sm"
-                placeholder="Your answer..."
-              />
-            </div>
+            <QuestionItem
+              key={i}
+              index={i}
+              question={question}
+              answer={answers[i]}
+              onChange={handleAnswerChange}
+            />
           ))}
         </div>
       </div>
