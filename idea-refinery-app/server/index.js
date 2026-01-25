@@ -129,11 +129,18 @@ const apiLimiter = rateLimit({
   message: { error: 'Too many requests, please try again later.' }
 });
 
+<<<<<<< HEAD
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5, // Strict limit for auth endpoints: 5 attempts per 15 minutes
   message: { error: 'Too many login attempts, please try again after 15 minutes.' }
+=======
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Strict limit for auth endpoints: 5 attempts per 15 mins
+  message: { error: 'Too many login attempts, please try again later.' }
+>>>>>>> origin/sentinel/rate-limit-auth-1156576316386844635
 });
 
 // Apply to all API routes
