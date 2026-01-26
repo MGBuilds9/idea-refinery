@@ -12,3 +12,5 @@
 
 ## 2024-05-26 - QuestionsStage Optimization **Learning:** Inline rendering of inputs in a list (`map`) combined with parent state causes O(N) re-renders for every keystroke. Even simple inputs become laggy with enough items. **Action:** Extract list items into memoized components (`QuestionItem`). Use `useCallback` with functional state updates (`prev => ...`) for the change handler to remove data dependencies, ensuring the handler reference remains stable across updates.
 
+
+## 2024-05-27 - Stabilizing Hook Actions **Learning:** Applying `React.memo` to heavy components like `InputStage` and `QuestionsStage` is useless if their props (action handlers from custom hooks) are recreated on every render. **Action:** Wrap all action handlers in `useProjectState` (like `handleGenerateQuestions`) in `useCallback` to ensure reference stability, enabling effective memoization of child components.

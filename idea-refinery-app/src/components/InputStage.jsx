@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import { Send, Sparkles } from 'lucide-react';
 import PromptSelector from './PromptSelector';
 
-export default function InputStage({ idea, setIdea, onNext, selectedPersona, setSelectedPersona }) {
+const InputStage = memo(function InputStage({ idea, setIdea, onNext, selectedPersona, setSelectedPersona }) {
   const [isFocused, setIsFocused] = useState(false);
   // ⚡ Bolt Optimization: Use local state for high-frequency input to prevent global re-renders
   const [localIdea, setLocalIdea] = useState(idea);
@@ -112,4 +112,6 @@ export default function InputStage({ idea, setIdea, onNext, selectedPersona, set
       </div>
     </div>
   );
-}
+});
+
+export default InputStage;
