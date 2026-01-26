@@ -135,7 +135,7 @@ export function useProjectState() {
     return true;
   }, []);
 
-  const handleGenerateQuestions = async (ideaOverride) => {
+  const handleGenerateQuestions = useCallback(async (ideaOverride) => {
     if (!checkApiKey()) return;
     setLoading(true);
     setLoadingMessage('Architect Agent: Structuring your idea...');
@@ -188,9 +188,9 @@ export function useProjectState() {
       setLoading(false);
       setLoadingMessage('');
     }
-  };
+  }, [checkApiKey, idea, saveProgress]);
 
-  const handleGenerateBlueprint = async () => {
+  const handleGenerateBlueprint = useCallback(async () => {
     if (!checkApiKey()) return;
     setLoading(true);
     setLoadingMessage('Architect Agent: Updating spec with your answers...');
@@ -238,7 +238,7 @@ export function useProjectState() {
       setLoading(false);
       setLoadingMessage('');
     }
-  };
+  }, [checkApiKey, questions, answers, ideaSpec, saveProgress]);
 
   const handleRefineBlueprint = useCallback(async (inputContent) => {
     if (!inputContent?.trim()) return;
@@ -345,7 +345,7 @@ export function useProjectState() {
     if (options.mockupHtml) ExportService.downloadFile('mockup.html', htmlMockup);
   };
 
-  const handleGenerateMockup = async () => {
+  const handleGenerateMockup = useCallback(async () => {
     if (!checkApiKey()) return;
     setLoading(true);
     setLoadingMessage('Designer Agent: Creating high-fidelity mockup...');
@@ -386,7 +386,7 @@ export function useProjectState() {
       setLoading(false);
       setLoadingMessage('');
     }
-  };
+  }, [checkApiKey, ideaSpec, blueprint, saveProgress]);
 
   const handleViewChange = useCallback((view) => {
       if (view === 'input' && activeView !== 'input') {

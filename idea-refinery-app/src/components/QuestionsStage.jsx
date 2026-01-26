@@ -1,8 +1,8 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, memo } from 'react';
 import { FileText, ArrowRight, ArrowLeft } from 'lucide-react';
 import QuestionItem from './QuestionItem';
 
-export default function QuestionsStage({ questions, answers, setAnswers, onNext, onBack, loading }) {
+const QuestionsStage = memo(function QuestionsStage({ questions, answers, setAnswers, onNext, onBack, loading }) {
   // ⚡ Bolt: Stable handler to ensure QuestionItem doesn't re-render unless its specific props change.
   // Optimization: Reduces re-renders from O(n) to O(1) per keystroke in the list.
   const handleAnswerChange = useCallback((index, value) => {
@@ -54,4 +54,6 @@ export default function QuestionsStage({ questions, answers, setAnswers, onNext,
       </div>
     </div>
   );
-}
+});
+
+export default QuestionsStage;
