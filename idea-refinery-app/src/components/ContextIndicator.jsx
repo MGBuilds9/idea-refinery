@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Zap, Minimize2, MessageSquare } from 'lucide-react';
 
 /**
@@ -42,7 +42,10 @@ export function getContextStats(messages, windowSize = 8) {
   };
 }
 
-export default function ContextIndicator({ messages, windowSize = 8 }) {
+// ⚡ Bolt Optimization: Memoize this component to prevent re-calculations of context stats
+// during high-frequency parent updates (like typing in the chat input).
+// Since 'messages' (chatHistory) is stable during typing, this prevents unnecessary work.
+const ContextIndicator = memo(function ContextIndicator({ messages, windowSize = 8 }) {
   const stats = getContextStats(messages, windowSize);
   
   // Don't show anything if no messages or very few
@@ -81,4 +84,6 @@ export default function ContextIndicator({ messages, windowSize = 8 }) {
       )}
     </div>
   );
-}
+});
+
+export default ContextIndicator;
