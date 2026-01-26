@@ -141,6 +141,8 @@ app.get('/health', (req, res) => {
 // Rate limiting
 import rateLimit from 'express-rate-limit';
 
+const MAX_SYNC_ITEMS = 100; // Prevent DoS by limiting batch size
+
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5000, // limit each IP to 5000 requests per windowMs
@@ -297,6 +299,10 @@ app.post('/api/sync/push', authenticateToken, async (req, res) => {
 
   if (!Array.isArray(items)) {
     return res.status(400).json({ error: 'Items array is required' });
+  }
+
+  if (items.length > MAX_SYNC_ITEMS) {
+    return res.status(400).json({ error: `Too many items. Max batch size is ${MAX_SYNC_ITEMS}.` });
   }
 
   try {
