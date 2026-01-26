@@ -12,3 +12,4 @@
 
 ## 2024-05-26 - QuestionsStage Optimization **Learning:** Inline rendering of inputs in a list (`map`) combined with parent state causes O(N) re-renders for every keystroke. Even simple inputs become laggy with enough items. **Action:** Extract list items into memoized components (`QuestionItem`). Use `useCallback` with functional state updates (`prev => ...`) for the change handler to remove data dependencies, ensuring the handler reference remains stable across updates.
 
+## 2024-05-27 - ContextIndicator Optimization **Learning:** Pure functional components that derive stats from props (like iterating over message history) inside high-frequency inputs (chat) re-calculate on every keystroke. **Action:** Apply `React.memo` to these utility components to prevent unnecessary re-execution of their logic and DOM diffing when the parent re-renders but their data hasn't changed.
