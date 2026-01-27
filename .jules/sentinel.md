@@ -18,3 +18,8 @@
 **Vulnerability:** The application fell back to a hardcoded string `dev-secret-key-change-in-prod` for `JWT_SECRET`, making production deployments vulnerable if the env var was missed.
 **Learning:** Hardcoded fallbacks for secrets are dangerous, even if intended for dev. Developers often forget to override them in prod. It's better to auto-generate a random secret for dev (convenience) but strictly fail in production if missing (security).
 **Prevention:** Never provide a hardcoded string as a fallback for a secret. Use `process.env.NODE_ENV` to enforce strict checks in production, and use `crypto.randomBytes` for temporary development secrets.
+
+## 2026-02-18 - Insecure Fallback to Server Secrets
+**Vulnerability:** The `/api/email/send` endpoint fell back to the server's `RESEND_API_KEY` if the user didn't provide one. This allowed any authenticated user to send arbitrary emails using the server's quota and domain reputation (Spam Gateway).
+**Learning:** Convenience fallbacks (e.g., "use server key if client key missing") often become security holes. If a feature is intended for user-specific actions (like "email myself"), it must strictly use user-provided credentials.
+**Prevention:** Never automatically fallback to server-level privileged keys for user-initiated content operations. Explicitly check for user authorization or user-provided keys.
