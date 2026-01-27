@@ -31,8 +31,10 @@ const HistoryView = ({ historyItems, onLoad, onDelete }) => {
     
     try {
       const target = localStorage.getItem('target_email');
-      if (!target) {
-        alert('Please set a Target Email in Settings first.');
+      const apiKey = localStorage.getItem('resend_api_key');
+
+      if (!target || !apiKey) {
+        alert('Please set a Target Email and Resend API Key in Settings first.');
         setEmailingId(null);
         return;
       }
@@ -45,7 +47,7 @@ const HistoryView = ({ historyItems, onLoad, onDelete }) => {
         <hr/>
         <pre style="white-space: pre-wrap; font-family: monospace;">${content}</pre>
       `;
-      await EmailService.send(target, `${type}: ${item.idea || 'Untitled'}`, html);
+      await EmailService.send(target, `${type}: ${item.idea || 'Untitled'}`, html, apiKey);
       setEmailSuccess(item.id);
       setTimeout(() => setEmailSuccess(null), 2000);
     } catch (err) {

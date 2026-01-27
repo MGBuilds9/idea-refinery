@@ -467,16 +467,16 @@ app.post('/api/prompts/reset', authenticateToken, async (req, res) => {
 
 // Email Endpoint (Resend)
 app.post('/api/email/send', authenticateToken, async (req, res) => {
-  const { to, subject, html, apiKey } = req.body; // Allow passing key from client (since we store it in Settings)
+  const { to, subject, html, apiKey } = req.body;
 
-  // If user doesn't provide key, maybe fallback to env?
-  const resendKey = apiKey || process.env.RESEND_API_KEY;
-
-  if (!resendKey) {
+  // Security: User must provide their own key. Do not fallback to server env var.
+  if (!apiKey) {
     return res.status(400).json({
       error: 'Resend API Key required. Please add it in Settings.'
     });
   }
+
+  const resendKey = apiKey;
 
   const resend = new Resend(resendKey);
 
