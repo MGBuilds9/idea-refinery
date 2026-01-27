@@ -117,12 +117,29 @@ export function useProjectState() {
            SyncService.push(serverUrl, { ...fullData, id }).catch(console.error);
         }
         
-        loadHistory(); // Refresh history list after save
+        // ⚡ Bolt Optimization: Manually update history state instead of re-fetching all items from DB.
+        // This avoids O(N) DB read and heavy React reconciliation on every save.
+        setHistoryItems(prev => {
+            const now = Date.now();
+            // Use existing timestamp if present (maintain creation time), but update lastUpdated
+            const newItem = {
+                ...fullData,
+                id,
+                lastUpdated: now,
+                timestamp: fullData.timestamp || now
+            };
+
+            // Remove existing item with same id (if any)
+            const others = prev.filter(item => item.id !== id);
+
+            // Add new item to top (since we sort by lastUpdated desc)
+            return [newItem, ...others];
+        });
 
     } catch (e) {
         console.error('Failed to auto-save:', e);
     }
-  }, [currentDbId, idea, questions, answers, blueprint, htmlMockup, masterPrompt, ideaSpec, chatHistory, loadHistory]);
+  }, [currentDbId, idea, questions, answers, blueprint, htmlMockup, masterPrompt, ideaSpec, chatHistory]);
 
   // Helper to ensure API key exists
   const checkApiKey = useCallback((p) => {
