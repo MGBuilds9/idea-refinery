@@ -30,6 +30,37 @@ const BlueprintStage = memo(function BlueprintStage({
   
   // Local state for features to allow smooth dragging before save
   const [localFeatures, setLocalFeatures] = useState([]);
+  // ⚡ Bolt Optimization: Ref to track the debounce timeout for saving reordered features
+  const saveTimeoutRef = useRef(null);
+  const pendingSaveDataRef = useRef(null);
+
+  // Track latest props to prevent stale closures in timeout/cleanup
+  const latestIdeaSpecRef = useRef(ideaSpec);
+  const latestOnSaveRef = useRef(onSave);
+
+  useEffect(() => {
+    latestIdeaSpecRef.current = ideaSpec;
+    latestOnSaveRef.current = onSave;
+  }, [ideaSpec, onSave]);
+
+  // Clear timeout and flush pending save on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+
+        // Flush any pending save on unmount to prevent data loss
+        if (pendingSaveDataRef.current && latestOnSaveRef.current && latestIdeaSpecRef.current) {
+          latestOnSaveRef.current({
+            ideaSpec: {
+                ...latestIdeaSpecRef.current,
+                features: pendingSaveDataRef.current
+            }
+          });
+        }
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (ideaSpec?.features) {
@@ -39,18 +70,28 @@ const BlueprintStage = memo(function BlueprintStage({
 
   const handleReorder = (newOrder) => {
     setLocalFeatures(newOrder);
-    // Debounce save or save immediately? 
-    // For smooth UX, maybe save on drag end? 
-    // framer-motion Reorder calls onReorder creates a state update.
-    // We should propagate to parent efficiently.
-    if (onSave && ideaSpec) {
-        onSave({ 
-            ideaSpec: { 
-                ...ideaSpec, 
-                features: newOrder 
-            } 
-        });
+    pendingSaveDataRef.current = newOrder;
+
+    // ⚡ Bolt Optimization: Debounce the expensive save operation (DB + Network)
+    // to prevent calling it on every single drag update event.
+    if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
     }
+
+    saveTimeoutRef.current = setTimeout(() => {
+        const currentSpec = latestIdeaSpecRef.current;
+        const currentOnSave = latestOnSaveRef.current;
+
+        if (currentOnSave && currentSpec) {
+            currentOnSave({
+                ideaSpec: {
+                    ...currentSpec,
+                    features: newOrder
+                }
+            });
+            pendingSaveDataRef.current = null;
+        }
+    }, 1000);
   };
 
   useEffect(() => {
