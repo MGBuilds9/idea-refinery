@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Save, RotateCcw, Loader2 } from 'lucide-react';
 
+import { DEFAULT_PROMPT_TEMPLATES } from '../lib/prompt_templates.js';
+
 // Default prompt keys we support
 const PROMPT_TYPES = [
   { id: 'questions', label: 'Clarifying Questions', desc: 'Generates initial questions for the user.' },
@@ -12,7 +14,22 @@ const PROMPT_TYPES = [
 export default function PromptStudio() {
   const [activeType, setActiveType] = useState('questions');
   // Store structured edits: { system: string, prompt: string }
-  const [localEdits, setLocalEdits] = useState({});
+  const [localEdits, setLocalEdits] = useState(() => {
+    // Initial state from defaults
+    const defaults = {};
+    PROMPT_TYPES.forEach(t => {
+      try {
+        const parsed = JSON.parse(DEFAULT_PROMPT_TEMPLATES[t.id] || '{}');
+        defaults[t.id] = {
+          system: parsed.system || '',
+          prompt: parsed.prompt || ''
+        };
+      } catch (e) {
+        defaults[t.id] = { system: '', prompt: '' };
+      }
+    });
+    return defaults;
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
@@ -69,10 +86,16 @@ export default function PromptStudio() {
             }
           });
 
-          // Initialize local edits with fetched data
+          // Initialize local edits with fetched data or defaults
           const splits = {};
           PROMPT_TYPES.forEach(t => {
-            splits[t.id] = map[t.id] || { system: '', prompt: '' };
+            let defaultVal = { system: '', prompt: '' };
+            try {
+                 const parsed = JSON.parse(DEFAULT_PROMPT_TEMPLATES[t.id] || '{}');
+                 defaultVal = { system: parsed.system || '', prompt: parsed.prompt || '' };
+            } catch(e) {}
+
+            splits[t.id] = map[t.id] || defaultVal;
           });
 
           console.log('Final local edits:', splits); // Debug log
@@ -143,13 +166,28 @@ export default function PromptStudio() {
         // Parse the default content response
         let parsedDefault = { system: '', prompt: '' };
         try {
-          const parsed = JSON.parse(data.content);
-          parsedDefault = {
-            system: parsed.system || '',
-            prompt: parsed.prompt || ''
-          };
+          // If content is returned, use it
+          if (data.content) {
+             const parsed = JSON.parse(data.content);
+             parsedDefault = {
+               system: parsed.system || '',
+               prompt: parsed.prompt || ''
+             };
+          } else {
+             // Fallback to local default if server just said OK but no content
+             const parsed = JSON.parse(DEFAULT_PROMPT_TEMPLATES[activeType] || '{}');
+             parsedDefault = {
+                system: parsed.system || '',
+                prompt: parsed.prompt || ''
+             };
+          }
         } catch (e) {
           console.error("Failed to parse default prompt", e);
+          // Ultimate fallback
+          try {
+             const parsed = JSON.parse(DEFAULT_PROMPT_TEMPLATES[activeType] || '{}');
+             parsedDefault = { system: parsed.system || '', prompt: parsed.prompt || '' };
+          } catch(err) {} 
         }
 
         setLocalEdits(prev => ({ ...prev, [activeType]: parsedDefault }));

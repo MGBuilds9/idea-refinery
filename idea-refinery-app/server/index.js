@@ -26,7 +26,7 @@ if (!JWT_SECRET) {
   process.exit(1);
 }
 
-import { DEFAULT_PROMPTS } from './default_prompts.js';
+import { DEFAULT_PROMPT_TEMPLATES as DEFAULT_PROMPTS } from '../src/lib/prompt_templates.js';
 import { AgentOrchestrator } from './services/AgentOrchestrator.js';
 
 // Seeding Default Prompts

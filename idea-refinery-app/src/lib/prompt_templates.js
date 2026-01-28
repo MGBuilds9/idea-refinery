@@ -1,4 +1,4 @@
-export const DEFAULT_PROMPTS = {
+export const DEFAULT_PROMPT_TEMPLATES = {
     questions: JSON.stringify({
         system: "You are an expert product manager and technical architect.",
         prompt: "I have a project idea: \"${idea}\"\n\nGenerate 3-5 thoughtful, specific questions that would help refine this idea and uncover important requirements, technical considerations, and feature needs. \n\nReturn ONLY a JSON array of strings (the questions), nothing else. Format: [\"question 1\", \"question 2\", ...]"
