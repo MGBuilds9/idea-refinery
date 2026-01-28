@@ -1,7 +1,36 @@
-import React from 'react';
-import { ChevronRight, ArrowRight, Check, X } from 'lucide-react';
+import React, { useMemo, memo } from 'react';
+import { ArrowRight, Check, X } from 'lucide-react';
 
-const DiffViewer = ({ oldSpec, newSpec, onAccept, onReject }) => {
+const DiffViewer = memo(function DiffViewer({ oldSpec, newSpec, onAccept, onReject }) {
+  // ⚡ Bolt Optimization: Memoize the diff calculation to avoid O(N) work on every render
+  // Must be called before any early returns to satisfy Rules of Hooks
+  const featureChanges = useMemo(() => {
+    if (!oldSpec || !newSpec) return [];
+
+    const changes = [];
+    const oldFeatures = oldSpec.features || [];
+    const newFeatures = newSpec.features || [];
+
+    // Find new and changed features
+    newFeatures.forEach((newF) => {
+      const oldF = oldFeatures.find((f) => f.id === newF.id);
+      if (!oldF) {
+        changes.push({ type: 'added', feature: newF });
+      } else if (JSON.stringify(oldF) !== JSON.stringify(newF)) {
+        changes.push({ type: 'changed', old: oldF, new: newF });
+      }
+    });
+
+    // Find removed features
+    oldFeatures.forEach((oldF) => {
+      if (!newFeatures.find((f) => f.id === oldF.id)) {
+        changes.push({ type: 'removed', feature: oldF });
+      }
+    });
+
+    return changes;
+  }, [oldSpec, newSpec]);
+
   if (!oldSpec || !newSpec) return null;
 
   const renderDiffLine = (label, oldValue, newValue) => {
@@ -25,33 +54,6 @@ const DiffViewer = ({ oldSpec, newSpec, onAccept, onReject }) => {
       </div>
     );
   };
-
-  const getChangedFeatures = () => {
-    const changes = [];
-    const oldFeatures = oldSpec.features || [];
-    const newFeatures = newSpec.features || [];
-
-    // Find new and changed features
-    newFeatures.forEach((newF) => {
-      const oldF = oldFeatures.find((f) => f.id === newF.id);
-      if (!oldF) {
-        changes.push({ type: 'added', feature: newF });
-      } else if (JSON.stringify(oldF) !== JSON.stringify(newF)) {
-        changes.push({ type: 'changed', old: oldF, new: newF });
-      }
-    });
-
-    // Find removed features
-    oldFeatures.forEach((oldF) => {
-      if (!newFeatures.find((f) => f.id === oldF.id)) {
-        changes.push({ type: 'removed', feature: oldF });
-      }
-    });
-
-    return changes;
-  };
-
-  const featureChanges = getChangedFeatures();
 
   return (
     <div className="bg-[var(--color-card)] border border-[var(--color-primary)]/30 rounded-xl overflow-hidden shadow-2xl animate-slide-up">
@@ -132,6 +134,6 @@ const DiffViewer = ({ oldSpec, newSpec, onAccept, onReject }) => {
       </div>
     </div>
   );
-};
+});
 
 export default DiffViewer;
