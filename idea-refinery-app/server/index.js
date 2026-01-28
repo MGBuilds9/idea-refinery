@@ -142,6 +142,7 @@ app.get('/health', (req, res) => {
 import rateLimit from 'express-rate-limit';
 
 const MAX_SYNC_ITEMS = 100; // Prevent DoS by limiting batch size
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -507,6 +508,9 @@ app.use('/api', (req, res, next) => {
   // POST requests to /api/prompts still require auth
   if (req.path === '/prompts' && req.method === 'GET') return next();
 
+  // Allow GET requests to public blueprints
+  if (req.path.startsWith('/public/') && req.method === 'GET') return next();
+
   // All other /api routes require authentication
   authenticateToken(req, res, next);
 });
@@ -616,6 +620,14 @@ app.post('/api/public/publish', authenticateToken, async (req, res) => {
     return res.status(400).json({ error: 'Content is required' });
   }
 
+  // Security: Input validation to prevent DoS
+  if (title && title.length > 255) {
+    return res.status(400).json({ error: 'Title must be less than 255 characters' });
+  }
+  if (content.length > 1000000) { // 1MB limit for text content
+    return res.status(400).json({ error: 'Content exceeds 1MB limit' });
+  }
+
   try {
     const expiresAt = expiresInDays
       ? new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000)
@@ -646,6 +658,11 @@ app.post('/api/public/publish', authenticateToken, async (req, res) => {
 // GET /api/public/:id - View a public blueprint (no auth required)
 app.get('/api/public/:id', async (req, res) => {
   const { id } = req.params;
+
+  // Security: Validate UUID to prevent database errors
+  if (!UUID_REGEX.test(id)) {
+    return res.status(400).json({ error: 'Invalid ID format' });
+  }
 
   try {
     // Check if blueprint exists and is not expired
@@ -685,6 +702,11 @@ app.get('/api/public/:id', async (req, res) => {
 app.delete('/api/public/:id', authenticateToken, async (req, res) => {
   const { id } = req.params;
   const userId = req.user.id;
+
+  // Security: Validate UUID
+  if (!UUID_REGEX.test(id)) {
+    return res.status(400).json({ error: 'Invalid ID format' });
+  }
 
   try {
     const result = await pool.query(
