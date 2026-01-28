@@ -23,3 +23,8 @@
 **Vulnerability:** The `/api/email/send` endpoint fell back to the server's `RESEND_API_KEY` if the user didn't provide one. This allowed any authenticated user to send arbitrary emails using the server's quota and domain reputation (Spam Gateway).
 **Learning:** Convenience fallbacks (e.g., "use server key if client key missing") often become security holes. If a feature is intended for user-specific actions (like "email myself"), it must strictly use user-provided credentials.
 **Prevention:** Never automatically fallback to server-level privileged keys for user-initiated content operations. Explicitly check for user authorization or user-provided keys.
+
+## 2026-02-22 - Broken Access Control & Missing Validation on Public Routes
+**Vulnerability:** Public access logic was broken by broad middleware application (`app.use('/api')`), and inputs (UUIDs, content) were not validated.
+**Learning:** Middleware ordering and broad path matching can unintentionally block public resources. Security controls must be granular and explicitly tested against "public" paths.
+**Prevention:** Use specific route mounting for auth middleware or explicit exemption logic based on strict path matching. Always validate all inputs (params and body) before DB queries.
