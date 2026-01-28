@@ -2,21 +2,23 @@ import React, { memo } from 'react';
 import { Reorder, useDragControls } from 'framer-motion';
 import { GripVertical, Layers, CheckCircle2 } from 'lucide-react';
 
+// ⚡ Bolt Optimization: Constants moved outside component to avoid recreation on every render.
+// Critical for performance in large drag-and-drop lists.
+const complexityColors = {
+  low: 'bg-green-50 text-green-700 border-green-200',
+  medium: 'bg-amber-50 text-amber-700 border-amber-200',
+  high: 'bg-red-50 text-red-700 border-red-200'
+};
+
+const complexityColorsDark = {
+  low: 'dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20',
+  medium: 'dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20',
+  high: 'dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20'
+};
+
 // Optimized: Wrapped in React.memo to prevent unnecessary re-renders during drag operations or parent updates
 const FeatureCard = memo(function FeatureCard({ feature, isDragging }) {
   const controls = useDragControls();
-
-  const complexityColors = {
-    low: 'bg-green-50 text-green-700 border-green-200',
-    medium: 'bg-amber-50 text-amber-700 border-amber-200',
-    high: 'bg-red-50 text-red-700 border-red-200'
-  };
-
-  const complexityColorsDark = {
-    low: 'dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20',
-    medium: 'dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20',
-    high: 'dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20'
-  };
 
   return (
     <div className={`
