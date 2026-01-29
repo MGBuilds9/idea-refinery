@@ -88,9 +88,10 @@ export function useProjectState() {
   }, []);
 
   const handleDeleteSession = useCallback(async (id) => {
+    // ⚡ Bolt Optimization: Optimistic update to avoid O(N) DB re-fetch
+    setHistoryItems(prev => prev.filter(item => item.id !== id));
     await deleteConversation(id);
-    loadHistory(); // Refresh list
-  }, [loadHistory]);
+  }, []);
 
   // Save helper
   const saveProgress = useCallback(async (updates) => {
