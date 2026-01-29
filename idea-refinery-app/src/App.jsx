@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, Suspense, useCallback } from 'react';
 import { Sparkles, Zap } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import BottomNav from './components/BottomNav';
@@ -140,6 +140,8 @@ function App() {
     localStorage.setItem('auth_token', token);
     setIsAuthenticated(true);
   };
+
+  const handleStartOver = useCallback(() => setStage('input'), [setStage]);
 
   return (
     <ThemeProvider>
@@ -306,13 +308,7 @@ function App() {
                             masterPrompt={masterPrompt}
                             htmlMockup={htmlMockup}
                             loading={loading}
-                            onStartOver={() => setStage('input')}
-                            onDownloadMarkdown={() => downloadFile(blueprint, 'blueprint.md', 'text/markdown')}
-                            onDownloadHTML={() => downloadFile(htmlMockup, 'mockup.html', 'text/html')}
-                            onDownloadBoth={() => {
-                              downloadFile(blueprint, 'blueprint.md', 'text/markdown');
-                              setTimeout(() => downloadFile(htmlMockup, 'mockup.html', 'text/html'), 100);
-                            }}
+                            onStartOver={handleStartOver}
                             ideaSpec={ideaSpec}
                             blueprint={blueprint}
                           />

@@ -1,14 +1,11 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Download, Sparkles, Check, Copy, Package, FileCode, FileText, Terminal } from 'lucide-react';
 import { ExportService } from '../services/ExportService';
 
-export default function MockupStage({ 
+const MockupStage = memo(function MockupStage({
   masterPrompt, 
   htmlMockup, 
   onStartOver, 
-  onDownloadMarkdown,
-  onDownloadHTML,
-  onDownloadBoth,
   loading,
   ideaSpec,
   blueprint
@@ -34,6 +31,19 @@ export default function MockupStage({
     const content = ExportService.toPromptMd(ideaSpec, blueprint);
     const name = (ideaSpec.meta?.name || 'project').toLowerCase().replace(/[^a-z0-9]+/g, '-');
     ExportService.downloadFile(`${name}-prompt.md`, content);
+  };
+
+  const handleDownloadMarkdown = () => {
+    ExportService.downloadFile('blueprint.md', blueprint);
+  };
+
+  const handleDownloadHTML = () => {
+    ExportService.downloadFile('mockup.html', htmlMockup);
+  };
+
+  const handleDownloadBoth = () => {
+    ExportService.downloadFile('blueprint.md', blueprint);
+    setTimeout(() => ExportService.downloadFile('mockup.html', htmlMockup), 100);
   };
 
   return (
@@ -90,14 +100,14 @@ export default function MockupStage({
               </div>
               <div className="flex gap-2">
                 <button
-                  onClick={onDownloadMarkdown}
+                  onClick={handleDownloadMarkdown}
                   className="flex items-center gap-2 bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded text-sm transition-all font-mono"
                 >
                   <Download className="w-4 h-4" />
                   BLUEPRINT.MD
                 </button>
                 <button
-                  onClick={onDownloadHTML}
+                  onClick={handleDownloadHTML}
                   className="flex items-center gap-2 bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded text-sm transition-all font-mono"
                 >
                   <Download className="w-4 h-4" />
@@ -190,7 +200,7 @@ export default function MockupStage({
               CREATE NEW PROJECT
             </button>
             <button
-              onClick={onDownloadBoth}
+              onClick={handleDownloadBoth}
               className="flex-1 bg-slate-800 hover:bg-slate-700 border border-amber-500/30 text-amber-400 font-medium py-4 rounded-lg transition-all flex items-center justify-center gap-2 font-mono"
             >
               <Download className="w-4 h-4" />
@@ -201,4 +211,6 @@ export default function MockupStage({
       )}
     </div>
   );
-}
+});
+
+export default MockupStage;
