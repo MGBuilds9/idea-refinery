@@ -28,3 +28,8 @@
 **Vulnerability:** Public access logic was broken by broad middleware application (`app.use('/api')`), and inputs (UUIDs, content) were not validated.
 **Learning:** Middleware ordering and broad path matching can unintentionally block public resources. Security controls must be granular and explicitly tested against "public" paths.
 **Prevention:** Use specific route mounting for auth middleware or explicit exemption logic based on strict path matching. Always validate all inputs (params and body) before DB queries.
+
+## 2026-02-23 - CORS Misconfiguration Allowing Arbitrary Origins
+**Vulnerability:** The CORS configuration used a loose `startsWith` check and a regex that matched prefixes, allowing attackers to bypass CORS by using subdomains (e.g., `http://localhost.evil.com`) or crafted IP domains.
+**Learning:** "Permissive" checks like `startsWith` for origins are almost always vulnerable. URL parsing logic is subtle; verify strict equality or use robust parsers (`new URL()`).
+**Prevention:** Avoid `startsWith` for security checks on URLs. Use `new URL(origin).hostname` and validate against a strict allowlist or strict regex (anchored with `^` and `$`).

@@ -73,16 +73,28 @@ app.use(cors({
     if (!origin) return callback(null, true);
 
     // Check if origin is allowed
-    const isAllowed = allowedOrigins.indexOf(origin) !== -1 ||
-      allowedOrigins.some(allowed => origin.startsWith(allowed)) ||
-      /^https?:\/\/(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|localhost)/.test(origin); // Allow local IPs and localhost
+    // 1. Exact match (secure)
+    if (allowedOrigins.indexOf(origin) !== -1) return callback(null, true);
 
-    if (isAllowed) {
-      callback(null, true);
-    } else {
-      console.warn(`⚠️  CORS blocked request from origin: ${origin}`);
-      callback(new Error(`Not allowed by CORS: ${origin}`));
+    // 2. Parse URL for robust hostname checking
+    try {
+      const url = new URL(origin);
+      const hostname = url.hostname;
+
+      // Allow localhost (any port/protocol)
+      if (hostname === 'localhost' || hostname === '127.0.0.1') return callback(null, true);
+
+      // Allow private IP ranges (RFC 1918)
+      // Matches: 192.168.x.x, 10.x.x.x, 172.16.x.x - 172.31.x.x
+      const isLocalIP = /^192\.168\.\d{1,3}\.\d{1,3}$|^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$|^172\.(1[6-9]|2[0-9]|3[0-1])\.\d{1,3}\.\d{1,3}$/.test(hostname);
+      if (isLocalIP) return callback(null, true);
+
+    } catch (e) {
+      // Invalid URL in origin header, block it
     }
+
+    console.warn(`⚠️  CORS blocked request from origin: ${origin}`);
+    callback(new Error(`Not allowed by CORS: ${origin}`));
   },
   credentials: true
 }));
