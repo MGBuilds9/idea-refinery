@@ -16,9 +16,16 @@ const getArtifactContent = (item) => {
   }
 };
 
-const HistoryView = ({ historyItems, onLoad, onDelete }) => {
+const HistoryView = ({ historyItems, onLoad, onDelete, onLoadMore, hasMore }) => {
   const [emailingId, setEmailingId] = useState(null);
   const [emailSuccess, setEmailSuccess] = useState(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  const handleLoadMoreClick = async () => {
+    setLoadingMore(true);
+    await onLoadMore();
+    setLoadingMore(false);
+  };
 
   const handleEmail = useCallback(async (e, item) => {
     e.stopPropagation();
@@ -87,6 +94,18 @@ const HistoryView = ({ historyItems, onLoad, onDelete }) => {
           ))
         )}
       </div>
+
+      {hasMore && (
+        <div className="mt-8 flex justify-center pb-8">
+            <button
+                onClick={handleLoadMoreClick}
+                disabled={loadingMore}
+                className="px-6 py-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800 text-zinc-400 hover:text-white transition-all font-mono text-sm border border-zinc-700/50 flex items-center gap-2"
+            >
+                {loadingMore ? 'Loading...' : 'Load More'}
+            </button>
+        </div>
+      )}
     </div>
   );
 };

@@ -39,12 +39,16 @@ export const saveConversation = async (data) => {
 
 /**
  * Get all conversations ordered by timestamp desc
+ * @param {number} limit - Max items to return (default 50)
+ * @param {number} offset - Number of items to skip (default 0)
  * @returns {Promise<Array>}
  */
-export const getRecentConversations = async () => {
+export const getRecentConversations = async (limit = 50, offset = 0) => {
   return await db.conversations
     .orderBy('lastUpdated')
     .reverse()
+    .offset(offset)
+    .limit(limit)
     .toArray();
 };
 
