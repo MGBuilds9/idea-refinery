@@ -33,3 +33,8 @@
 **Vulnerability:** The CORS configuration used a loose `startsWith` check and a regex that matched prefixes, allowing attackers to bypass CORS by using subdomains (e.g., `http://localhost.evil.com`) or crafted IP domains.
 **Learning:** "Permissive" checks like `startsWith` for origins are almost always vulnerable. URL parsing logic is subtle; verify strict equality or use robust parsers (`new URL()`).
 **Prevention:** Avoid `startsWith` for security checks on URLs. Use `new URL(origin).hostname` and validate against a strict allowlist or strict regex (anchored with `^` and `$`).
+
+## 2026-03-01 - DoS via Middleware Misordering & Excessive Payload Limits
+**Vulnerability:** The `express.json` middleware with a global 50MB limit was placed *before* rate limiters. This allowed unauthenticated attackers to exhaust server memory and CPU by sending large payloads to any endpoint (e.g., login), bypassing rate limits (as parsing happens first).
+**Learning:** Middleware order is critical for security. Expensive operations (body parsing, especially large ones) must occur *after* cheap checks (rate limiting, header validation). Global defaults should be secure (small limits), with exceptions only for specific routes.
+**Prevention:** Always place `express-rate-limit` at the top of the middleware stack. Use granular `express.json({ limit: ... })` on specific routes instead of a dangerous global default.

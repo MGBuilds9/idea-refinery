@@ -7,6 +7,10 @@ import jwt from 'jsonwebtoken';
 import { Resend } from 'resend';
 import crypto from 'crypto';
 import { pool } from './db.js';
+import rateLimit from 'express-rate-limit';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
 
 let JWT_SECRET = process.env.JWT_SECRET;
 
@@ -100,13 +104,40 @@ app.use(cors({
 }));
 app.set('trust proxy', 1); // Trust first key-value pair in X-Forwarded-For
 
-app.use(express.json({ limit: '50mb' }));
+// ===== SECURITY MIDDLEWARE (DoS Protection) =====
+
+const MAX_SYNC_ITEMS = 100; // Prevent DoS by limiting batch size
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// 1. Rate Limiting (Apply BEFORE body parsing to prevent CPU exhaustion)
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5000, // limit each IP to 5000 requests per windowMs
+  message: { error: 'Too many requests, please try again later.' }
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Strict limit for auth endpoints: 5 attempts per 15 minutes
+  message: { error: 'Too many login attempts, please try again after 15 minutes.' }
+});
+
+// Apply rate limits
+app.use('/api/', apiLimiter);
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
+
+// 2. Body Parsing (Granular limits to prevent Memory exhaustion)
+// Specific routes needing large payloads
+app.use('/api/sync/push', express.json({ limit: '50mb' }));
+app.use('/api/export', express.json({ limit: '50mb' }));
+app.use('/api/refine', express.json({ limit: '10mb' }));
+app.use('/api/public/publish', express.json({ limit: '2mb' }));
+
+// Default strict limit for all other routes (login, register, prompts, etc.)
+app.use(express.json({ limit: '100kb' }));
 
 // Serve static files from the dist directory
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -149,31 +180,6 @@ app.use(express.static(distPath));
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
-
-// Rate limiting
-import rateLimit from 'express-rate-limit';
-
-const MAX_SYNC_ITEMS = 100; // Prevent DoS by limiting batch size
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5000, // limit each IP to 5000 requests per windowMs
-  message: { error: 'Too many requests, please try again later.' }
-});
-
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // Strict limit for auth endpoints: 5 attempts per 15 minutes
-  message: { error: 'Too many login attempts, please try again after 15 minutes.' }
-});
-
-// Apply to all API routes
-app.use('/api/', apiLimiter);
-
-// Apply strict limit to auth routes
-app.use('/api/auth/login', authLimiter);
-app.use('/api/auth/register', authLimiter);
 
 // Authentication Middleware
 const authenticateToken = (req, res, next) => {

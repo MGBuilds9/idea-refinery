@@ -1,4 +1,4 @@
-import { DEFAULT_PROMPTS } from '../default_prompts.js';
+import { DEFAULT_PROMPT_TEMPLATES as DEFAULT_PROMPTS } from '../../src/lib/prompt_templates.js';
 
 export class AgentOrchestrator {
   constructor(config) {
