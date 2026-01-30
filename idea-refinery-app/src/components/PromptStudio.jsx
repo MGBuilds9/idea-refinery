@@ -24,7 +24,7 @@ export default function PromptStudio() {
           system: parsed.system || '',
           prompt: parsed.prompt || ''
         };
-      } catch (e) {
+      } catch {
         defaults[t.id] = { system: '', prompt: '' };
       }
     });
@@ -93,7 +93,7 @@ export default function PromptStudio() {
             try {
                  const parsed = JSON.parse(DEFAULT_PROMPT_TEMPLATES[t.id] || '{}');
                  defaultVal = { system: parsed.system || '', prompt: parsed.prompt || '' };
-            } catch(e) {}
+            } catch {}
 
             splits[t.id] = map[t.id] || defaultVal;
           });
@@ -187,7 +187,7 @@ export default function PromptStudio() {
           try {
              const parsed = JSON.parse(DEFAULT_PROMPT_TEMPLATES[activeType] || '{}');
              parsedDefault = { system: parsed.system || '', prompt: parsed.prompt || '' };
-          } catch(err) {} 
+          } catch {}
         }
 
         setLocalEdits(prev => ({ ...prev, [activeType]: parsedDefault }));

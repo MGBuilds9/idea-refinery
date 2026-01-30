@@ -16,7 +16,9 @@ export function useProjectState() {
   const [loadingMessage, setLoadingMessage] = useState('');
   
   // History State
+  const HISTORY_BATCH_SIZE = 20;
   const [historyItems, setHistoryItems] = useState([]);
+  const [hasMoreHistory, setHasMoreHistory] = useState(true);
   const [currentDbId, setCurrentDbId] = useState(null);
   
   // Data State
@@ -54,9 +56,19 @@ export function useProjectState() {
   }, []);
 
   const loadHistory = useCallback(async () => {
-    const items = await getRecentConversations();
+    const items = await getRecentConversations(HISTORY_BATCH_SIZE, 0);
     setHistoryItems(items);
+    setHasMoreHistory(items.length >= HISTORY_BATCH_SIZE);
   }, []);
+
+  const handleLoadMore = useCallback(async () => {
+    const currentCount = historyItems.length;
+    const items = await getRecentConversations(HISTORY_BATCH_SIZE, currentCount);
+    if (items.length > 0) {
+        setHistoryItems(prev => [...prev, ...items]);
+    }
+    setHasMoreHistory(items.length >= HISTORY_BATCH_SIZE);
+  }, [historyItems.length]);
 
   const handleLoadSession = useCallback((item, goToBlueprint = false) => {
     setIdea(item.idea);
@@ -439,6 +451,7 @@ export function useProjectState() {
       loading, setLoading,
       loadingMessage, setLoadingMessage,
       historyItems, setHistoryItems,
+      hasMoreHistory,
       currentDbId, setCurrentDbId,
       idea, setIdea,
       questions, setQuestions,
@@ -456,6 +469,7 @@ export function useProjectState() {
     },
     actions: {
       loadHistory,
+      handleLoadMore,
       handleLoadSession,
       handleDeleteSession,
       saveProgress,

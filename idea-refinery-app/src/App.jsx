@@ -30,14 +30,14 @@ function App() {
   const { state: projectState, actions: projectActions } = useProjectState();
   const {
     activeView, stage, setStage, loading, loadingMessage,
-    historyItems, idea, setIdea, questions, answers, setAnswers,
+    historyItems, hasMoreHistory, idea, setIdea, questions, answers, setAnswers,
     blueprint, masterPrompt, htmlMockup, ideaSpec, conversation,
     chatHistory, blueprintTab, setBlueprintTab,
     selectedPersona, setSelectedPersona, publicBlueprintId, initializing
   } = projectState;
 
   const {
-    loadHistory, handleLoadSession, handleDeleteSession, handleGenerateQuestions,
+    loadHistory, handleLoadMore, handleLoadSession, handleDeleteSession, handleGenerateQuestions,
     handleGenerateBlueprint, handleRefineBlueprint, handleGenerateMockup, handleViewChange
   } = projectActions;
 
@@ -233,8 +233,10 @@ function App() {
                   {activeView === 'history' && (
                     <HistoryView
                       historyItems={historyItems}
+                      hasMore={hasMoreHistory}
                       onLoad={handleLoadSession}
                       onDelete={handleDeleteSession}
+                      onLoadMore={handleLoadMore}
                     />
                   )}
 
