@@ -38,3 +38,8 @@
 **Vulnerability:** The `express.json` middleware with a global 50MB limit was placed *before* rate limiters. This allowed unauthenticated attackers to exhaust server memory and CPU by sending large payloads to any endpoint (e.g., login), bypassing rate limits (as parsing happens first).
 **Learning:** Middleware order is critical for security. Expensive operations (body parsing, especially large ones) must occur *after* cheap checks (rate limiting, header validation). Global defaults should be secure (small limits), with exceptions only for specific routes.
 **Prevention:** Always place `express-rate-limit` at the top of the middleware stack. Use granular `express.json({ limit: ... })` on specific routes instead of a dangerous global default.
+
+## 2026-03-03 - Broken Authentication (Missing Re-auth)
+**Vulnerability:** The `/api/auth/change-password` endpoint allowed changing the password without providing the current password, enabling session hijackers to permanently take over accounts.
+**Learning:** Authentication endpoints must always follow the "trust but verify" principle. Possession of a session token proves identity but not intent for destructive actions (like password change). Re-authentication (via old password) is mandatory for sensitive account changes.
+**Prevention:** Enforce `oldPassword` verification on all password change endpoints. Update frontend UI to collect this information.

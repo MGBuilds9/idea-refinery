@@ -266,8 +266,22 @@ app.post('/api/auth/register', authLimiter, async (req, res) => {
 });
 
 app.post('/api/auth/change-password', authenticateToken, async (req, res) => {
-  const { newPassword } = req.body;
+  const { oldPassword, newPassword } = req.body;
+
+  if (!oldPassword || !newPassword) {
+    return res.status(400).json({ error: 'Current and new passwords are required' });
+  }
+
   try {
+    // Security: Verify old password before changing
+    const userResult = await pool.query('SELECT password_hash FROM users WHERE id = $1', [req.user.id]);
+    if (userResult.rows.length === 0) return res.sendStatus(404);
+
+    const match = await bcrypt.compare(oldPassword, userResult.rows[0].password_hash);
+    if (!match) {
+      return res.status(403).json({ error: 'Incorrect current password' });
+    }
+
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hashedPassword, req.user.id]);
     res.json({ success: true });

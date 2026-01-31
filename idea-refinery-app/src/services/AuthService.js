@@ -91,7 +91,7 @@ export const AuthService = {
   },
 
   // Change password
-  async changePassword(serverUrl, newPassword) {
+  async changePassword(serverUrl, newPassword, oldPassword) {
     const baseUrl = serverUrl.replace(/\/$/, '');
     const token = this.getToken();
 
@@ -106,7 +106,7 @@ export const AuthService = {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ newPassword })
+        body: JSON.stringify({ newPassword, oldPassword })
       });
 
       if (!response.ok) {
