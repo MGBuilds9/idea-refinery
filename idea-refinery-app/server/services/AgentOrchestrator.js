@@ -29,7 +29,7 @@ export class AgentOrchestrator {
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: this.model || 'claude-3-5-sonnet-20240620',
+        model: this.model || 'claude-3-5-sonnet-20241022',
         system,
         messages: [{ role: 'user', content: user }],
         max_tokens: 4096

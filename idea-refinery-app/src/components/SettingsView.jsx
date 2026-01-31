@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Save, Eye, EyeOff, Zap, Bot, Settings2, Lock, Server, LogIn, LogOut, Download, Database, CloudOff, Palette } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { llm, AVAILABLE_MODELS } from '../lib/llm';
-import { saveSetting, exportAllData } from '../services/db';
+import { exportAllData } from '../services/db';
 import { SecureStorage } from '../services/secure_storage';
 import { AuthService } from '../services/AuthService';
 

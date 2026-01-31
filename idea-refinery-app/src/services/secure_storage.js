@@ -1,5 +1,5 @@
 import { encryptData, decryptData, hashPin } from './crypto';
-import { db, saveSetting, getSetting } from './db';
+import { saveSetting, getSetting } from './db';
 
 /**
  * secure_storage.js
@@ -82,7 +82,7 @@ export const SecureStorage = {
     let parsed;
     try {
       parsed = JSON.parse(raw);
-    } catch (e) {
+    } catch {
       return null;
     }
 

@@ -1,5 +1,4 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { getSetting, saveSetting } from '../services/db';
 import { SecureStorage } from '../services/secure_storage';
 
 /**

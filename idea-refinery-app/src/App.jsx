@@ -19,7 +19,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 const BlueprintStage = React.lazy(() => import('./components/BlueprintStage'));
 const MockupStage = React.lazy(() => import('./components/MockupStage'));
 import { llm } from './lib/llm';
-import { cleanupOldConversations, getSetting, pullItems } from './services/db';
+import { cleanupOldConversations, pullItems } from './services/db';
 import { PromptService } from './services/PromptService';
 import { useProjectState } from './hooks/useProjectState';
 
