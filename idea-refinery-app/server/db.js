@@ -6,6 +6,23 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
+// Debug: Log connection details (masked)
+try {
+  if (process.env.DATABASE_URL) {
+    const url = new URL(process.env.DATABASE_URL);
+    console.log(`🔌 Database Config:
+      Host: ${url.hostname}
+      Port: ${url.port}
+      Database: ${url.pathname.substring(1)}
+      User: ${url.username}
+      Password: ${url.password ? '****' : 'none'}`);
+  } else {
+    console.error('❌ FATAL: DATABASE_URL is not defined!');
+  }
+} catch (e) {
+  console.error('❌ Invalid DATABASE_URL format');
+}
+
 // Initialize database
 const initDb = async () => {
   try {
