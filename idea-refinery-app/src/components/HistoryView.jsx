@@ -37,11 +37,23 @@ const HistoryView = ({ historyItems, onLoad, onDelete, onLoadMore, hasMore }) =>
     setEmailSuccess(null);
     
     try {
+      const { llm } = await import('../lib/llm');
+      const { SecureStorage } = await import('../services/secure_storage');
+      
       const target = localStorage.getItem('target_email');
-      const apiKey = localStorage.getItem('resend_api_key');
+      
+      // Secure retrieval
+      let apiKey = null;
+      if (llm.activePin) {
+          apiKey = await SecureStorage.getItem('resend_api_key', llm.activePin);
+      }
+      
+      // Fallback: If not found securely, try local (legacy) but warn/log? 
+      // Actually strictly ONLY allow secure if possible, but for migration maybe check?
+      // No, let's enforce security. If they migrated, it's in SecureStorage.
 
       if (!target || !apiKey) {
-        alert('Please set a Target Email and Resend API Key in Settings first.');
+        alert('Please set a Target Email and Resend API Key in Settings first (and ensure PIN is unlocked).');
         setEmailingId(null);
         return;
       }

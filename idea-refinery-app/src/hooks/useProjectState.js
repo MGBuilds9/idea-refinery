@@ -377,11 +377,9 @@ export function useProjectState() {
 
   const handleExportPackage = async (options) => {
     if (!ideaSpec) return;
-    // v1.5 Export all
-    if (options.blueprint) ExportService.downloadFile('BLUEPRINT.md', blueprint);
-    if (options.cursorRules) ExportService.downloadFile('.cursorrules', ExportService.toCursorRules(ideaSpec));
-    if (options.implementationPlan) ExportService.downloadFile('implementation_plan.md', ExportService.toImplementationPlan(ideaSpec));
-    if (options.mockupHtml) ExportService.downloadFile('mockup.html', htmlMockup);
+    
+    // v1.5: Always download as a single ZIP package based on selected options
+    ExportService.downloadZip(ideaSpec, blueprint, htmlMockup, options);
   };
 
   const handleGenerateMockup = async () => {

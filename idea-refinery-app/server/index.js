@@ -292,7 +292,7 @@ app.post('/api/refine', authenticateToken, async (req, res) => {
     // Increment version if it's an update? For now, just return
     res.json(result);
   } catch (error) {
-    console.error('Refinement error:', error);
+    console.error('Refinement error:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
@@ -305,7 +305,7 @@ app.post('/api/export', authenticateToken, async (req, res) => {
     const artifacts = await orchestrator.generateArtifacts(spec, design);
     res.json(artifacts);
   } catch (error) {
-    console.error('Export error:', error);
+    console.error('Export error:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
@@ -560,7 +560,7 @@ app.post('/api/anthropic', async (req, res) => {
 
     res.json(data);
   } catch (error) {
-    console.error('Anthropic proxy error:', error);
+    console.error('Anthropic proxy error:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
@@ -590,7 +590,7 @@ app.post('/api/openai', async (req, res) => {
 
     res.json(data);
   } catch (error) {
-    console.error('OpenAI proxy error:', error);
+    console.error('OpenAI proxy error:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
@@ -623,7 +623,7 @@ app.post('/api/gemini', async (req, res) => {
 
     res.json(data);
   } catch (error) {
-    console.error('Gemini proxy error:', error);
+    console.error('Gemini proxy error:', error.message);
     res.status(500).json({ error: error.message });
   }
 });

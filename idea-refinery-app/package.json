@@ -28,6 +28,7 @@
     "express": "^5.2.1",
     "framer-motion": "^12.26.2",
     "jsonwebtoken": "^9.0.3",
+    "jszip": "^3.10.1",
     "lucide-react": "^0.562.0",
     "openai": "^6.16.0",
     "pg": "^8.17.1",

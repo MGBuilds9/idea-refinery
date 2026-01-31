@@ -242,14 +242,11 @@ export function createOrchestrator(config = null) {
     return new AgentOrchestrator(config);
   }
 
-  // 2. localStorage fallback
-  const provider = localStorage.getItem("llm_provider");
-  const apiKey = localStorage.getItem(`${provider}_api_key`);
+  // 2. localStorage fallback REMOVED for security
+  // We strictly require keys to be passed in, or the session must use the authenticated LLM service.
+  console.warn("AgentOrchestrator: No config provided. Use the authenticated 'llm' service to get keys.");
+  return null;
 
-  if (!provider || !apiKey) {
-    console.warn("AgentOrchestrator: Missing provider or API key locally");
-    return null;
-  }
 
   return new AgentOrchestrator({ provider, apiKey });
 }

@@ -1,3 +1,5 @@
+import JSZip from 'jszip';
+
 /**
  * ExportService.js - Generate v1.5 Export Formats
  *
@@ -5,12 +7,75 @@
  * - .cursorrules - AI coding assistant configuration
  * - implementation_plan.md - Detailed development plan
  * - prompt.md - Context dump for AI tools
+ * - Download All as .zip
  */
 
 /**
  * Export format generators
  */
 export const ExportService = {
+  /**
+   * Generate ZIP file containing all export artifacts
+   * @param {Object} ideaSpec - Complete IdeaSpec object
+   * @param {string} blueprint - Compiled markdown blueprint
+   * @param {string} htmlMockup - Generated HTML mockup
+   * @param {Object} options - Flags for which files to include
+   */
+  async downloadZip(ideaSpec, blueprint, htmlMockup, options = {}) {
+    // Default to all if no options provided
+    const includeAll = Object.keys(options).length === 0;
+    
+    const zip = new JSZip();
+    const projectName = (ideaSpec.meta?.name || "project")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-");
+
+    // Add files to zip based on options
+    if (includeAll || options.cursorRules) {
+        zip.file(".cursorrules", this.toCursorRules(ideaSpec));
+    }
+    
+    if (includeAll || options.implementationPlan) {
+        zip.file(`${projectName}-implementation_plan.md`, this.toImplementationPlan(ideaSpec));
+    }
+    
+    if (includeAll || options.promptMd) { // prompt.md isn't inherently in options of ExportModal? Check options keys.
+        // ExportModal uses: blueprint, cursorRules, implementationPlan, mockupHtml.
+        // prompt.md seems invalid in ExportModal state? 
+        // Wait, ExportModal has: blueprint, cursorRules, implementationPlan, mockupHtml.
+        // prompt.md is usually part of "context dump". 
+        // Let's assume prompt.md is included if 'blueprint' is included or add it to 'implementationPlan'?
+        // Actually ExportModal doesn't list 'prompt.md'. 
+        // I'll include it if implementationPlan is selected, as a bonus? Or blueprint?
+        // Let's include it if 'blueprint' is selected since it's the "context".
+        zip.file(`${projectName}-prompt.md`, this.toPromptMd(ideaSpec, blueprint));
+        zip.file(`${projectName}-opencode.md`, this.toOpenCodePrompt(ideaSpec));
+    }
+
+    if (includeAll || options.blueprint) {
+      if (blueprint) {
+        zip.file(`${projectName}-BLUEPRINT.md`, blueprint);
+      }
+      // Also adding the prompts here if blueprint selected, to match above logic if I didn't separate it
+    }
+    
+    if (includeAll || options.mockupHtml) {
+      if (htmlMockup) {
+        zip.file(`${projectName}-mockup.html`, htmlMockup);
+      }
+    }
+
+    // Generate and trigger download
+    const content = await zip.generateAsync({ type: "blob" });
+    const url = URL.createObjectURL(content);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${projectName}-export-package.zip`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  },
   /**
    * Generate .cursorrules file content
    * @param {Object} ideaSpec - Complete IdeaSpec object
@@ -307,24 +372,9 @@ ${prompt}`;
    * Export all formats for an IdeaSpec
    * @param {Object} ideaSpec - Complete IdeaSpec object
    * @param {string} [blueprint] - Optional markdown blueprint
+   * @param {string} [htmlMockup] - Optional HTML mockup
    */
-  exportAll(ideaSpec, blueprint = "") {
-    const projectName = (ideaSpec.meta?.name || "project")
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-");
-
-    this.downloadFile(".cursorrules", this.toCursorRules(ideaSpec));
-    this.downloadFile(
-      `${projectName}-implementation_plan.md`,
-      this.toImplementationPlan(ideaSpec),
-    );
-    this.downloadFile(
-      `${projectName}-prompt.md`,
-      this.toPromptMd(ideaSpec, blueprint),
-    );
-    this.downloadFile(
-      `${projectName}-opencode.md`,
-      this.toOpenCodePrompt(ideaSpec),
-    );
+  exportAll(ideaSpec, blueprint = "", htmlMockup = "") {
+    this.downloadZip(ideaSpec, blueprint, htmlMockup);
   },
 };

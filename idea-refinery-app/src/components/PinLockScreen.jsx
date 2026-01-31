@@ -35,16 +35,33 @@ export default function PinLockScreen({ onSuccess, isSetup = false }) {
   useEffect(() => {
     if (pin.length === PIN_LENGTH) {
       // Simulate verification delay
-      setTimeout(() => {
+      setTimeout(async () => {
         if (isSetup) {
-          localStorage.setItem('app_pin', pin);
-          onSuccess();
-        } else {
-          const stored = localStorage.getItem('app_pin');
-          if (stored === pin) {
-            onSuccess(pin);
-          } else {
+          // New Setup Flow: Set PIN in SecureStorage
+          try {
+            const { SecureStorage } = await import('../services/secure_storage');
+            await SecureStorage.setPin(pin);
+            onSuccess(pin); // Pass pin back for key re-encryption if needed
+          } catch (e) {
+            console.error(e);
             setError(true);
+            setPin('');
+          }
+        } else {
+          // Verification Flow
+          try {
+            const { SecureStorage } = await import('../services/secure_storage');
+            const isValid = await SecureStorage.verifyPin(pin);
+            
+            if (isValid) {
+              onSuccess(pin);
+            } else {
+              setError(true);
+              setPin('');
+            }
+          } catch (e) {
+            console.error('PIN Check Error:', e);
+            setError(true); // Fail secure
             setPin('');
           }
         }

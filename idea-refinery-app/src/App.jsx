@@ -46,6 +46,7 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('auth_token'));
   const [isLocked, setIsLocked] = useState(true);
   const [checkingLock, setCheckingLock] = useState(true);
+  const [forcingPinSetup, setForcingPinSetup] = useState(false);
   // Track if we just unlocked to prevent re-locking
   const [sessionUnlocked, setSessionUnlocked] = useState(false);
   // eslint-disable-next-line no-unused-vars
@@ -65,22 +66,22 @@ function App() {
         }
 
         // v1.2: Check local storage for PIN first
-        const localPin = localStorage.getItem('app_pin');
-        if (localPin) {
+        const { SecureStorage } = await import('./services/secure_storage');
+        const isPinSet = await SecureStorage.isPinSet();
+
+        if (isPinSet) {
           setIsLocked(true);
         } else {
-          // Fallback to legacy DB check
-          const pinHash = await getSetting('pinHash');
-          if (pinHash) {
-            setIsLocked(true);
-          } else {
-            // If no PIN at all, and not onboarding, we might be in an inconsistent state or dev mode
-            setIsLocked(false);
-          }
+          // STRICT SECURITY: If no PIN is set, we MUST force setup.
+          // Unless we are in onboarding (handled separately).
+          console.warn('Security Alert: No PIN set. Forcing setup.');
+          setForcingPinSetup(true);
+          setIsLocked(true); // Technically locked until setup is done
         }
       } catch (e) {
         console.error('Error checking PIN lock:', e);
-        setIsLocked(false);
+        // Fail secure
+        setIsLocked(true);
       } finally {
         setCheckingLock(false);
       }
@@ -96,18 +97,20 @@ function App() {
   }, [isOnboarding, publicBlueprintId, sessionUnlocked, loadHistory]);
 
   const handleUnlock = async (pin) => {
-    // Verify PIN against localStorage
-    const storedPin = localStorage.getItem('app_pin');
+    // Verify PIN against secure storage
+    const { SecureStorage } = await import('./services/secure_storage');
+    const isValid = await SecureStorage.verifyPin(pin);
 
-    if (storedPin && pin !== storedPin) {
+    // Legacy fallback check (can be removed if we are sure everyone migrated, but safer to keep for a bit)
+    // Actually SecureStorage.verifyPin handles the legacy hash check too.
+    
+    if (!isValid) {
       alert('Incorrect PIN');
       return;
     }
 
     setActivePin(pin);
     // Load encrypted API keys and set active PIN on llm service
-    // For v1.2, we might be storing keys in localStorage plain text (transition period)
-    // But let's try to load properly if they exist.
     await llm.loadEncryptedKeys(pin);
     llm.setActivePin(pin);
 
@@ -124,6 +127,21 @@ function App() {
     setIsLocked(false);
 
     loadHistory();
+  };
+  
+  const handlePinSetupSuccess = async (newPin) => {
+      // PinLockScreen already calls SecureStorage.setPin
+      setForcingPinSetup(false);
+      
+      // Auto-unlock with the new PIN
+      setActivePin(newPin);
+      llm.setActivePin(newPin);
+      
+      // Attempt to migrate any lingering plaintext keys now that we have a PIN
+      await llm.checkAndMigrateLegacyKeys(newPin);
+      
+      setSessionUnlocked(true);
+      setIsLocked(false);
   };
 
   const handleOnboardingComplete = () => {
@@ -176,8 +194,13 @@ function App() {
         {/* Auth priority: PIN first for returning users, login only if JWT missing/expired */}
         {!initializing && !publicBlueprintId && !checkingLock && !isOnboarding && (
           <>
-            {/* Show PIN lock first if user has a PIN set and valid JWT */}
-            {isAuthenticated && isLocked && (
+            {/* Show Mandatory PIN Setup if needed */}
+            {forcingPinSetup && (
+                 <PinLockScreen isSetup={true} onSuccess={handlePinSetupSuccess} />
+            )}
+          
+            {/* Show PIN lock first if user has a PIN set and not doing setup */}
+            {!forcingPinSetup && isAuthenticated && isLocked && (
               <PinLockScreen onSuccess={handleUnlock} />
             )}
 
@@ -253,6 +276,7 @@ function App() {
                           onNext={handleGenerateQuestions}
                           selectedPersona={selectedPersona}
                           setSelectedPersona={setSelectedPersona}
+                          loading={loading}
                         />
                       )}
 

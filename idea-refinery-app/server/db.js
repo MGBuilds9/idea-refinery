@@ -80,16 +80,25 @@ const initDb = async () => {
       `);
       
       // Seed default admin if no users exist
-      const userCheck = await client.query('SELECT count(*) FROM users');
-      if (parseInt(userCheck.rows[0].count) === 0) {
-        console.log('🌱 Seeding default admin user...');
-        // Hash 'admin123'
-        const hashedPassword = await bcrypt.hash('admin123', 10);
-        await client.query(
-          'INSERT INTO users (username, password_hash) VALUES ($1, $2)',
-          ['admin', hashedPassword]
-        );
-        console.log('⚠️  Default user created: admin / admin123');
+      // Security Hardening: Do NOT create default admin with hardcoded password automatically in production.
+      // Only create if explicitly requested via environment variable.
+      if (process.env.SEED_DEFAULT_ADMIN === 'true') {
+        const userCheck = await client.query('SELECT count(*) FROM users');
+        if (parseInt(userCheck.rows[0].count) === 0) {
+          console.log('🌱 Seeding default admin user...');
+          // Hash 'admin123'
+          const hashedPassword = await bcrypt.hash('admin123', 10);
+          await client.query(
+            'INSERT INTO users (username, password_hash) VALUES ($1, $2)',
+            ['admin', hashedPassword]
+          );
+          console.log('⚠️  Default user created: admin / admin123 (Change immediately!)');
+        }
+      } else {
+         const userCheck = await client.query('SELECT count(*) FROM users');
+         if (parseInt(userCheck.rows[0].count) === 0) {
+             console.log('ℹ️  No users found. Run with SEED_DEFAULT_ADMIN=true to create default admin.');
+         }
       }
 
       console.log('✅ Database initialized');

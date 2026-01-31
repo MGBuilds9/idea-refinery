@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getSetting, saveSetting } from '../services/db';
-import { encryptData, decryptData } from '../services/crypto';
+import { SecureStorage } from '../services/secure_storage';
 
 /**
  * @typedef {'anthropic' | 'openai' | 'gemini'} Provider
@@ -43,11 +43,11 @@ const DEFAULT_SETTINGS = {
 
 class LLMService {
   constructor() {
-    // In-memory keys for the session (loaded from localStorage fallback or decrypted from Dexie)
+    // In-memory keys for the session (loaded only after unlock)
     this.apiKeys = {
-      anthropic: localStorage.getItem('anthropic_key') || '',
-      openai: localStorage.getItem('openai_key') || '',
-      gemini: localStorage.getItem('gemini_key') || ''
+      anthropic: '',
+      openai: '',
+      gemini: ''
     };
     this.defaultProvider = localStorage.getItem('llm_provider') || 'openai';
     this.activePin = null; // Set after unlock for encrypted operations
@@ -62,30 +62,77 @@ class LLMService {
     this.activePin = pin;
   }
 
-  // Load encrypted API keys from Dexie (called after unlock)
+  // Check for legacy plaintext keys and migrate them if PIN is provided
+  async checkAndMigrateLegacyKeys(pin) {
+    let migratedCount = 0;
+    try {
+        const legacyKeys = {
+            anthropic: localStorage.getItem('anthropic_key'),
+            openai: localStorage.getItem('openai_key'),
+            gemini: localStorage.getItem('gemini_key')
+        };
+        
+        // Filter out null/empty
+        const keysToMigrate = Object.entries(legacyKeys).reduce((acc, [k, v]) => {
+            if (v && v.length > 5) acc[k] = v;
+            return acc;
+        }, {});
+
+        if (Object.keys(keysToMigrate).length === 0) return 0;
+
+        console.log('Migrating legacy keys:', Object.keys(keysToMigrate));
+        
+        // 1. Load existing encrypted keys (to merge, not overwrite)
+        const currentEncrypted = await SecureStorage.getItem('api_keys', pin) || {};
+        
+        // 2. Merge legacy into encrypted
+        const mergedKeys = { ...currentEncrypted, ...keysToMigrate };
+        
+        // 3. Save encrypted
+        await SecureStorage.setItem('api_keys', mergedKeys, pin);
+        
+        // 4. Update memory state
+        this.apiKeys = { ...this.apiKeys, ...mergedKeys };
+        this.activePin = pin;
+        
+        // 5. Wipe legacy plaintext
+        Object.keys(keysToMigrate).forEach(provider => {
+            localStorage.removeItem(`${provider}_key`);
+        });
+        
+        migratedCount = Object.keys(keysToMigrate).length;
+        console.log(`Successfully migrated ${migratedCount} legacy keys.`);
+    } catch (e) {
+        console.error('Migration failed:', e);
+    }
+    return migratedCount;
+  }
+
+  // Load encrypted API keys from SecureStorage (called after unlock)
   async loadEncryptedKeys(pin) {
     try {
-      const encryptedKeys = await getSetting('encryptedApiKeys');
-      if (encryptedKeys) {
-        const decrypted = await decryptData(encryptedKeys, pin);
-        console.log('Decrypted keys loaded:', Object.keys(decrypted));
-        this.apiKeys = { ...this.apiKeys, ...decrypted };
+      // First check for migration need
+      await this.checkAndMigrateLegacyKeys(pin);
+        
+      const decryptedKeys = await SecureStorage.getItem('api_keys', pin);
+      if (decryptedKeys) {
+        console.log('Decrypted keys loaded:', Object.keys(decryptedKeys));
+        this.apiKeys = { ...this.apiKeys, ...decryptedKeys };
         this.activePin = pin;
         return true;
       }
-      return false; // No encrypted keys found, use localStorage fallback
+      return false; 
     } catch (e) {
       console.error('Failed to load encrypted keys:', e);
       return false;
     }
   }
 
-  // Save all API keys encrypted to Dexie
+  // Save all API keys encrypted to SecureStorage
   async saveEncryptedKeys(pin) {
     try {
       console.log('Saving encrypted keys for:', Object.keys(this.apiKeys));
-      const encrypted = await encryptData(this.apiKeys, pin);
-      await saveSetting('encryptedApiKeys', encrypted);
+      await SecureStorage.setItem('api_keys', this.apiKeys, pin);
       return true;
     } catch (e) {
       console.error('Failed to save encrypted keys:', e);
@@ -123,15 +170,17 @@ class LLMService {
     // Update internal state
     this.apiKeys = { ...this.apiKeys, ...keys };
     
-    // Update localStorage
-    Object.entries(keys).forEach(([provider, key]) => {
-      localStorage.setItem(`${provider}_key`, key);
-    });
+    // Legacy localStorage writes REMOVED for security
+    // Object.entries(keys).forEach(([provider, key]) => {
+    //   localStorage.setItem(`${provider}_key`, key);
+    // });
 
-    // Single encrypted save if PIN is active
+    // Enforce encrypted save
     if (this.activePin) {
       console.log('PIN active, saving encrypted...');
       await this.saveEncryptedKeys(this.activePin);
+    } else {
+        throw new Error('No PIN active. Cannot save keys securely.');
     }
   }
 

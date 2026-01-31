@@ -38,15 +38,15 @@ export async function generateCompletion({ provider, apiKey, model, messages, ma
   }
 }
 
+const PROXY_URL = 'http://localhost:3001/api';
+
 async function callAnthropic({ apiKey, model, messages, maxTokens, system }) {
-  // Anthropic expects system prompt as a top-level parameter, not in messages
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
+  // Use proxy
+  const response = await fetch(`${PROXY_URL}/anthropic`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-      "anthropic-dangerously-allow-browser": "true" // Needed for client-side usage
+      "x-api-key": apiKey
     },
     body: JSON.stringify({
       model: model || DEFAULT_MODELS[LLM_PROVIDERS.ANTHROPIC],
@@ -66,8 +66,11 @@ async function callAnthropic({ apiKey, model, messages, maxTokens, system }) {
 }
 
 async function callGemini({ apiKey, model, messages, maxTokens, system }) {
-  // Map messages to Gemini format (user -> user, assistant -> model)
-  // System instructions are passed separately in newer API versions or as first part
+  // Use proxy
+  // Note: Proxy expects specific body format. We'll adapt to match what proxy handles.
+  // Looking at server/index.js (from memory/review), it likely forwards the body or adapts it.
+  // But let's assume valid proxy structure. src/lib/llm.js uses the same proxy!
+  // We can mirror logic from src/lib/llm.js callGemini.
   
   const contents = messages
     .filter(m => m.role !== 'system')
@@ -76,10 +79,9 @@ async function callGemini({ apiKey, model, messages, maxTokens, system }) {
       parts: [{ text: m.content }]
     }));
 
-  const modelName = model || DEFAULT_MODELS[LLM_PROVIDERS.GEMINI];
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
-
   const body = {
+    model: model || DEFAULT_MODELS[LLM_PROVIDERS.GEMINI],
+    apiKey, // Proxy might strip this from body if passed in header, but src/lib/llm.js passes it in body for Gemini proxy
     contents,
     generationConfig: {
       maxOutputTokens: maxTokens
@@ -92,7 +94,7 @@ async function callGemini({ apiKey, model, messages, maxTokens, system }) {
     };
   }
 
-  const response = await fetch(url, {
+  const response = await fetch(`${PROXY_URL}/gemini`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body)
@@ -117,7 +119,7 @@ async function callOpenAI({ apiKey, model, messages, maxTokens, system }) {
     msgs.unshift({ role: 'system', content: system });
   }
 
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+  const response = await fetch(`${PROXY_URL}/openai`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

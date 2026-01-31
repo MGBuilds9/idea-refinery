@@ -19,22 +19,28 @@ db.version(3).stores({
  */
 export const saveConversation = async (data) => {
   const timestamp = Date.now();
+  console.log('[DB] Saving conversation:', data.id ? `Update ${data.id}` : 'New Record', data);
   
-  // If we have an ID, update existing
-  if (data.id) {
-    await db.conversations.update(data.id, {
+  try {
+    // If we have an ID, update existing
+    if (data.id) {
+      await db.conversations.update(data.id, {
+        ...data,
+        lastUpdated: timestamp
+      });
+      return data.id;
+    }
+    
+    // Otherwise create new
+    return await db.conversations.add({
       ...data,
+      timestamp,
       lastUpdated: timestamp
     });
-    return data.id;
+  } catch (e) {
+    console.error('[DB] Save failed:', e);
+    throw e;
   }
-  
-  // Otherwise create new
-  return await db.conversations.add({
-    ...data,
-    timestamp,
-    lastUpdated: timestamp
-  });
 };
 
 /**

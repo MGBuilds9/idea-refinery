@@ -3,7 +3,7 @@ import { Save, Eye, EyeOff, Zap, Bot, Settings2, Lock, Server, LogIn, LogOut, Do
 import { useTheme } from '../contexts/ThemeContext';
 import { llm, AVAILABLE_MODELS } from '../lib/llm';
 import { saveSetting, exportAllData } from '../services/db';
-import { hashPin } from '../services/crypto';
+import { SecureStorage } from '../services/secure_storage';
 import { AuthService } from '../services/AuthService';
 
 // Get initial settings outside component to avoid recalculation
@@ -116,6 +116,20 @@ export default function SettingsView() {
     { id: 'security', label: 'Security', icon: Lock }
   ];
 
+  // Secure Resend Key Load
+  const [resendKey, setResendKey] = useState('');
+  
+  // Load Resend key securely on mount (if PIN active)
+  React.useEffect(() => {
+    async function loadResendKey() {
+      if (llm.activePin) {
+        const key = await SecureStorage.getItem('resend_api_key', llm.activePin);
+        if (key) setResendKey(key);
+      }
+    }
+    loadResendKey();
+  }, []);
+
   const handleSavePin = async () => {
     setPinError('');
     setPinSuccess('');
@@ -130,9 +144,48 @@ export default function SettingsView() {
     }
 
     try {
-      const hash = await hashPin(newPin);
-      await saveSetting('pinHash', hash);
-      setPinSuccess('PIN saved successfully! Restart app to enable.');
+      const isConfigured = await SecureStorage.isPinSet();
+      
+      if (isConfigured) {
+         // Change PIN Flow: Needs Old PIN (assumed activePin is valid since they are here)
+         // But "activePin" might not be set if they just refreshed. 
+         // Ideally we should ask for "Old PIN" input if one is set.
+         // For simplicity, we'll assume they unlocked the app to get here, so `llm.activePin` is valid.
+         
+         if (!llm.activePin) {
+             setPinError('Please unlock the app properly first.');
+             return;
+         }
+         
+         // 1. Decrypt everything with old PIN
+         const oldApiKeys = await SecureStorage.getItem('api_keys', llm.activePin);
+         const oldResendKey = await SecureStorage.getItem('resend_api_key', llm.activePin);
+         
+         // 2. Set new PIN
+         await SecureStorage.setPin(newPin);
+         
+         // 3. Re-encrypt with new PIN
+         if (oldApiKeys) await SecureStorage.setItem('api_keys', oldApiKeys, newPin);
+         if (oldResendKey) await SecureStorage.setItem('resend_api_key', oldResendKey, newPin);
+         
+         // 4. Update session
+         llm.setActivePin(newPin);
+         setPinSuccess('PIN changed and data re-encrypted successfully!');
+      } else {
+          // Fresh Setup Flow
+          await SecureStorage.setPin(newPin);
+          
+          // Re-encrypt keys with new PIN if they exist in memory
+          llm.setActivePin(newPin);
+          
+          // If we have keys in memory, save them now
+          if (keys.anthropic || keys.openai || keys.gemini) {
+             await llm.saveEncryptedKeys(newPin);
+          }
+          
+          setPinSuccess('PIN set successfully! API keys are now encrypted.');
+      }
+
       setNewPin('');
       setConfirmPin('');
     } catch (e) {
@@ -142,9 +195,15 @@ export default function SettingsView() {
   };
 
   const handleRemovePin = async () => {
+    if (!confirm('WARNING: Removing the PIN will DELETE your encrypted keys to prevent lockout. Are you sure?')) {
+        return;
+    }
     try {
-      await saveSetting('pinHash', null);
-      setPinSuccess('PIN removed. App will no longer be locked.');
+      await SecureStorage.removePin();
+      // We must clear secure storage because we can't decrypt it anymore without PIN
+      SecureStorage.clearAll();
+      llm.activePin = null;
+      setPinSuccess('PIN removed. Secure vault cleared.');
     } catch (e) {
       console.error(e);
       setPinError('Failed to remove PIN');
@@ -611,13 +670,14 @@ export default function SettingsView() {
                     </label>
                     <input
                       type="password"
-                      defaultValue={localStorage.getItem('resend_api_key') || ''}
-                      onChange={(e) => {
-                        localStorage.setItem('resend_api_key', e.target.value);
-                      }}
+                      value={resendKey}
+                      onChange={(e) => setResendKey(e.target.value)}
                       placeholder="re_..."
                       className="input w-full"
                     />
+                    <p className="text-xs text-orange-600 mt-1">
+                        Requires PIN to be set for encryption.
+                    </p>
                   </div>
 
                   <div>
@@ -638,17 +698,20 @@ export default function SettingsView() {
                     onClick={async () => {
                       try {
                         setSaveStatus('Sending...');
-                        const key = localStorage.getItem('resend_api_key');
+                        // Save the key first securely
+                        if (!llm.activePin) throw new Error('PIN not active, cannot save securely.');
+                        
+                        await SecureStorage.setItem('resend_api_key', resendKey, llm.activePin);
                         const target = localStorage.getItem('target_email');
 
-                        if (!key) throw new Error('No API Key');
+                        if (!resendKey) throw new Error('No API Key');
                         if (!target) throw new Error('No Target Email set');
 
                         await import('../services/email').then(m => m.EmailService.send(
                           target, // To
                           'Test Email from Idea Refinery',
                           '<h1>It works!</h1><p>Your email configuration is correct.</p>',
-                          key
+                          resendKey
                         ));
                         setSaveStatus('Email Sent!');
                         setTimeout(() => setSaveStatus(''), 2000);
@@ -659,10 +722,12 @@ export default function SettingsView() {
                     }}
                     className="btn-secondary text-sm"
                   >
-                    Send Test Email
+                    Save & Send Test Email
                   </button>
                 </div>
               </div>
+              
+              {/* ... Export Data section ... */}
 
               <div className="h-px bg-[var(--color-border)] my-8" />
 

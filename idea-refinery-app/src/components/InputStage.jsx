@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Send, Sparkles } from 'lucide-react';
 import PromptSelector from './PromptSelector';
 
-export default function InputStage({ idea, setIdea, onNext, selectedPersona, setSelectedPersona }) {
+export default function InputStage({ idea, setIdea, onNext, selectedPersona, setSelectedPersona, loading }) {
   const [isFocused, setIsFocused] = useState(false);
   // ⚡ Bolt Optimization: Use local state for high-frequency input to prevent global re-renders
   const [localIdea, setLocalIdea] = useState(idea);
@@ -85,13 +85,22 @@ export default function InputStage({ idea, setIdea, onNext, selectedPersona, set
 
                 <button
                   onClick={handleSubmit}
-                  disabled={!localIdea.trim()}
-                  aria-disabled={!localIdea.trim()}
+                  disabled={!localIdea.trim() || loading}
+                  aria-disabled={!localIdea.trim() || loading}
                   title={!localIdea.trim() ? "Please describe your idea first" : "Generate blueprint (Cmd+Enter)"}
                   className="btn-primary cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <span className="font-semibold">Refine</span>
-                  <Send size={18} className="transition-transform group-hover:translate-x-1" />
+                  {loading ? (
+                    <span className="font-semibold flex items-center gap-2">
+                       <Sparkles className="animate-spin" size={18} />
+                       Refining...
+                    </span>
+                  ) : (
+                    <>
+                      <span className="font-semibold">Refine</span>
+                      <Send size={18} className="transition-transform group-hover:translate-x-1" />
+                    </>
+                  )}
                 </button>
               </div>
             </div>
