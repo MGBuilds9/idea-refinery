@@ -3,13 +3,15 @@ import { Database } from 'lucide-react';
 
 const TokenUsage = memo(function TokenUsage({ contextItems = [] }) {
   // Rough estimation: 1 word ~= 1.3 tokens. 4 chars ~= 1 token.
-  // ⚡ Bolt Optimization: Memoize token calculation to avoid expensive O(N) JSON.stringify on every render
+  // ⚡ Bolt Optimization: Sum lengths directly to avoid expensive O(N) string concatenation and allocation.
+  // We treat JSON.stringify only for objects to maintain estimation accuracy without the memory overhead.
   const totalTokens = useMemo(() => {
-    let text = '';
-    contextItems.forEach(item => {
-      text += JSON.stringify(item.content || item);
-    });
-    return Math.ceil(text.length / 4);
+    return Math.ceil(contextItems.reduce((acc, item) => {
+      const content = item.content || item;
+      // If string, use length directly (saving memory). If object, stringify to get size.
+      const len = typeof content === 'string' ? content.length : JSON.stringify(content).length;
+      return acc + len;
+    }, 0) / 4);
   }, [contextItems]);
 
   const isCompressed = useMemo(() => {
