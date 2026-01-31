@@ -262,7 +262,7 @@ function App() {
                           answers={answers}
                           setAnswers={setAnswers}
                           onNext={handleGenerateBlueprint}
-                          onBack={() => setStage('input')}
+                          onBack={handleStartOver}
                           loading={loading}
                         />
                       )}
@@ -287,7 +287,7 @@ function App() {
                             conversation={conversation}
                             onRefine={handleRefineBlueprint}
                             onGenerateMockup={handleGenerateMockup}
-                            onStartOver={() => setStage('input')}
+                            onStartOver={handleStartOver}
                             loading={loading}
                             currentTab={blueprintTab}
                             setTab={setBlueprintTab}
@@ -295,7 +295,7 @@ function App() {
                             ideaSpec={ideaSpec}
                             proposedSpec={projectState.proposedSpec}
                             onAcceptRefinement={projectActions.handleAcceptRefinement}
-                            onRejectRefinement={() => projectActions.setProposedSpec(null)}
+                            onRejectRefinement={projectActions.handleRejectRefinement}
                             isExportModalOpen={projectState.isExportModalOpen}
                             setIsExportModalOpen={projectActions.setIsExportModalOpen}
                             onExportPackage={projectActions.handleExportPackage}
