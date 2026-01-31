@@ -429,7 +429,8 @@ app.get('/api/prompts', async (req, res) => {
     res.json(prompts);
   } catch (e) {
     console.error('Prompts fetch error:', e);
-    res.status(500).json({ error: 'Failed to fetch prompts' });
+    console.error('Stack trace:', e.stack);
+    res.status(500).json({ error: 'Failed to fetch prompts', details: e.message });
   }
 });
 

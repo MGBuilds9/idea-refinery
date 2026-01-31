@@ -1,13 +1,13 @@
 /**
  * AgentOrchestrator.js - Coordinates the Three-Agent Workflow
- * 
+ *
  * This service orchestrates the Architect -> Critic -> Designer pipeline
  * for Blueprint v1.5's structured spec-first architecture.
  */
 
-import { generateCompletion } from './llm';
-import { PROMPTS } from '../lib/prompts';
-import { validateIdeaSpec, findGaps, compileToMarkdown } from '../lib/IdeaSpec';
+import { generateCompletion } from "./llm";
+import { PROMPTS } from "../lib/prompts";
+import { validateIdeaSpec, findGaps, compileToMarkdown } from "../lib/IdeaSpec";
 
 /**
  * AgentOrchestrator class for managing the three-agent workflow
@@ -31,20 +31,20 @@ export class AgentOrchestrator {
    * @returns {string} Clean JSON string
    */
   extractJson(text) {
-    if (!text) return '{}';
-    
+    if (!text) return "{}";
+
     // Remove markdown code blocks if present
     const codeBlockMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
     if (codeBlockMatch) {
       return codeBlockMatch[1].trim();
     }
-    
+
     // Try to find JSON object boundaries
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       return jsonMatch[0].trim();
     }
-    
+
     return text.trim();
   }
 
@@ -55,23 +55,23 @@ export class AgentOrchestrator {
    */
   async runArchitect(rawIdea) {
     const { system, prompt } = PROMPTS.architect(rawIdea);
-    
+
     const response = await generateCompletion({
       provider: this.provider,
       apiKey: this.apiKey,
       model: this.model,
-      messages: [{ role: 'user', content: prompt }],
+      messages: [{ role: "user", content: prompt }],
       system,
-      maxTokens: 8000
+      maxTokens: 8000,
     });
-    
+
     try {
       const jsonString = this.extractJson(response);
       const ideaSpec = JSON.parse(jsonString);
       return validateIdeaSpec(ideaSpec);
     } catch (error) {
-      console.error('Architect JSON parse error:', error);
-      console.error('Raw response:', response);
+      console.error("Architect JSON parse error:", error);
+      console.error("Raw response:", response);
       throw new Error(`Failed to parse Architect response: ${error.message}`);
     }
   }
@@ -83,26 +83,26 @@ export class AgentOrchestrator {
    */
   async runCritic(ideaSpec) {
     const { system, prompt } = PROMPTS.critic(ideaSpec);
-    
+
     const response = await generateCompletion({
       provider: this.provider,
       apiKey: this.apiKey,
       model: this.model,
-      messages: [{ role: 'user', content: prompt }],
+      messages: [{ role: "user", content: prompt }],
       system,
-      maxTokens: 4000
+      maxTokens: 4000,
     });
-    
+
     try {
       const jsonString = this.extractJson(response);
       return JSON.parse(jsonString);
     } catch (error) {
-      console.error('Critic JSON parse error:', error);
+      console.error("Critic JSON parse error:", error);
       // Return a safe fallback - assume approved if we can't parse
-      return { 
-        status: 'APPROVED', 
+      return {
+        status: "APPROVED",
         issues: [],
-        parseError: error.message 
+        parseError: error.message,
       };
     }
   }
@@ -114,20 +114,20 @@ export class AgentOrchestrator {
    */
   async runDesigner(ideaSpec) {
     const { system, prompt } = PROMPTS.designerMockup(ideaSpec);
-    
+
     return await generateCompletion({
       provider: this.provider,
       apiKey: this.apiKey,
       model: this.model,
-      messages: [{ role: 'user', content: prompt }],
+      messages: [{ role: "user", content: prompt }],
       system,
-      maxTokens: 16000
+      maxTokens: 16000,
     });
   }
 
   /**
    * Full Pipeline: Raw Idea -> IdeaSpec -> Validation -> Gaps
-   * 
+   *
    * @param {string} rawIdea - User's raw idea text
    * @param {Object} [options]
    * @param {boolean} [options.validateFirst=true] - Run critic before returning
@@ -136,50 +136,49 @@ export class AgentOrchestrator {
    */
   async refine(rawIdea, options = {}) {
     const { validateFirst = true, generateMarkdown = true } = options;
-    
+
     // Step 1: Architect structures the idea
     const ideaSpec = await this.runArchitect(rawIdea);
-    
+
     let critique = null;
-    
+
     // Step 2: Critic validates (optional)
     if (validateFirst) {
       critique = await this.runCritic(ideaSpec);
-      
-      if (critique.status === 'FAILED') {
-        const highSeverityIssues = critique.issues?.filter(
-          i => i.severity === 'HIGH'
-        ) || [];
-        
+
+      if (critique.status === "FAILED") {
+        const highSeverityIssues =
+          critique.issues?.filter((i) => i.severity === "HIGH") || [];
+
         // Only block on high severity issues
         if (highSeverityIssues.length > 0) {
-          return { 
-            success: false, 
-            ideaSpec, 
+          return {
+            success: false,
+            ideaSpec,
             critique,
             issues: critique.issues,
-            needsRevision: true
+            needsRevision: true,
           };
         }
       }
     }
-    
+
     // Step 3: Find gaps for user interrogation
     const gaps = findGaps(ideaSpec);
-    
+
     // Step 4: Compile to markdown if requested
     let markdown = null;
     if (generateMarkdown) {
       markdown = compileToMarkdown(ideaSpec);
     }
-    
-    return { 
-      success: true, 
-      ideaSpec, 
+
+    return {
+      success: true,
+      ideaSpec,
       critique,
       gaps,
       markdown,
-      needsInput: gaps.filter(g => g.type === 'required').length > 0
+      needsInput: gaps.filter((g) => g.type === "required").length > 0,
     };
   }
 
@@ -203,27 +202,27 @@ export class AgentOrchestrator {
 Current spec: ${JSON.stringify(ideaSpec, null, 2)}
 
 Additional context from user:
-${qa.map(({ question, answer }) => `Q: ${question}\nA: ${answer}`).join('\n\n')}
+${qa.map(({ question, answer }) => `Q: ${question}\nA: ${answer}`).join("\n\n")}
 
 Please update the IdeaSpec with this new information. Return the complete updated JSON.`;
 
-    const { system } = PROMPTS.architect('');
-    
+    const { system } = PROMPTS.architect("");
+
     const response = await generateCompletion({
       provider: this.provider,
       apiKey: this.apiKey,
       model: this.model,
-      messages: [{ role: 'user', content: context }],
+      messages: [{ role: "user", content: context }],
       system,
-      maxTokens: 8000
+      maxTokens: 8000,
     });
-    
+
     try {
       const jsonString = this.extractJson(response);
       const updatedSpec = JSON.parse(jsonString);
       return validateIdeaSpec(updatedSpec);
     } catch (error) {
-      console.error('Gap fill parse error:', error);
+      console.error("Gap fill parse error:", error);
       return ideaSpec; // Return original on failure
     }
   }
@@ -233,14 +232,24 @@ Please update the IdeaSpec with this new information. Return the complete update
  * Factory function for creating orchestrator with current settings
  * @returns {AgentOrchestrator|null}
  */
-export function createOrchestrator() {
-  const provider = localStorage.getItem('llm_provider');
+export function createOrchestrator(config = null) {
+  // 1. explicit config
+  if (config) {
+    if (!config.provider || !config.apiKey) {
+      console.warn("AgentOrchestrator: Invalid config provided", config);
+      return null;
+    }
+    return new AgentOrchestrator(config);
+  }
+
+  // 2. localStorage fallback
+  const provider = localStorage.getItem("llm_provider");
   const apiKey = localStorage.getItem(`${provider}_api_key`);
-  
+
   if (!provider || !apiKey) {
-    console.warn('AgentOrchestrator: Missing provider or API key');
+    console.warn("AgentOrchestrator: Missing provider or API key locally");
     return null;
   }
-  
+
   return new AgentOrchestrator({ provider, apiKey });
 }

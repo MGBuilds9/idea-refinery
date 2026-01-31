@@ -174,8 +174,11 @@ export function useProjectState() {
     const currentIdea = typeof ideaOverride === 'string' ? ideaOverride : idea;
 
     try {
-      const orchestrator = createOrchestrator();
-      if (!orchestrator) throw new Error('Failed to initialize AI agent');
+      const provider = llm.getDefaultProvider();
+      const apiKey = llm.getApiKey(provider);
+      
+      const orchestrator = createOrchestrator({ provider, apiKey });
+      if (!orchestrator) throw new Error('Failed to initialize AI agent (Missing credentials)');
 
       // Run Architect + Critic + Gap Analysis
       const result = await orchestrator.refine(currentIdea);
@@ -227,7 +230,9 @@ export function useProjectState() {
     setStage('generating');
     
     try {
-      const orchestrator = createOrchestrator();
+      const provider = llm.getDefaultProvider();
+      const apiKey = llm.getApiKey(provider);
+      const orchestrator = createOrchestrator({ provider, apiKey });
       
       // Convert answers array to QA pairs
       const qaPairs = questions.map((q, i) => ({
@@ -385,7 +390,9 @@ export function useProjectState() {
     setLoadingMessage('Designer Agent: Creating high-fidelity mockup...');
     setStage('mockup');
     try {
-      const orchestrator = createOrchestrator();
+      const provider = llm.getDefaultProvider();
+      const apiKey = llm.getApiKey(provider);
+      const orchestrator = createOrchestrator({ provider, apiKey });
       
       let html = '';
       
