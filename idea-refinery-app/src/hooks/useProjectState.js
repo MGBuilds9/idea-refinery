@@ -366,6 +366,10 @@ export function useProjectState() {
     await saveProgress({ ideaSpec: proposedSpec, blueprint: newMarkdown });
   };
 
+  const handleRejectRefinement = useCallback(() => {
+    setProposedSpec(null);
+  }, []);
+
   const handleExportPackage = async (options) => {
     if (!ideaSpec) return;
     // v1.5 Export all
@@ -477,6 +481,7 @@ export function useProjectState() {
       handleGenerateBlueprint,
       handleRefineBlueprint,
       handleAcceptRefinement,
+      handleRejectRefinement,
       setProposedSpec,
       setIsExportModalOpen,
       handleExportPackage,
