@@ -53,6 +53,7 @@ export default function SettingsView() {
   const [pinSuccess, setPinSuccess] = useState('');
 
   // Server Auth state
+  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
@@ -214,6 +215,11 @@ export default function SettingsView() {
     setPasswordError('');
     setPasswordSuccess('');
 
+    if (!currentPassword) {
+      setPasswordError('Current password is required');
+      return;
+    }
+
     if (newPassword.length < 6) {
       setPasswordError('Password must be at least 6 characters');
       return;
@@ -224,8 +230,9 @@ export default function SettingsView() {
     }
 
     try {
-      await AuthService.changePassword(serverUrl, newPassword);
+      await AuthService.changePassword(serverUrl, newPassword, currentPassword);
       setPasswordSuccess('Password changed successfully');
+      setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
     } catch (e) {
@@ -851,30 +858,45 @@ export default function SettingsView() {
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-6">
                 <div>
                   <label className="block text-sm font-semibold text-[var(--color-text)] mb-2">
-                    New Password
+                    Current Password
                   </label>
                   <input
                     type="password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="New Password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    placeholder="Current Password"
                     className="input w-full"
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-semibold text-[var(--color-text)] mb-2">
-                    Confirm Password
-                  </label>
-                  <input
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Confirm Password"
-                    className="input w-full"
-                  />
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-semibold text-[var(--color-text)] mb-2">
+                      New Password
+                    </label>
+                    <input
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="New Password"
+                      className="input w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-[var(--color-text)] mb-2">
+                      Confirm Password
+                    </label>
+                    <input
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Confirm Password"
+                      className="input w-full"
+                    />
+                  </div>
                 </div>
               </div>
 

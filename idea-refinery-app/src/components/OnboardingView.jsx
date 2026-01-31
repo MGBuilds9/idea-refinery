@@ -138,7 +138,7 @@ export default function OnboardingView({ onComplete }) {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
-          body: JSON.stringify({ newPassword })
+          body: JSON.stringify({ newPassword, oldPassword: password })
         });
         
         if (!pwReq.ok) throw new Error('Failed to update password');
