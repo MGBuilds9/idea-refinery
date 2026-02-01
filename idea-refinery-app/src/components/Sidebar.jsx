@@ -1,14 +1,40 @@
 import React, { memo } from 'react';
 import { PlusCircle, History, Settings, Terminal } from 'lucide-react';
 
-const Sidebar = memo(({ activeView, onViewChange, isOpen, onClose }) => {
-  const menuItems = [
-    { id: 'input', label: 'New Project', icon: PlusCircle },
-    { id: 'history', label: 'History', icon: History },
-    { id: 'prompts', label: 'Prompts', icon: Terminal },
-    { id: 'settings', label: 'Settings', icon: Settings },
-  ];
+// ⚡ Bolt Optimization: Define menu items outside component to avoid reallocation on every render
+const MENU_ITEMS = [
+  { id: 'input', label: 'New Project', icon: PlusCircle },
+  { id: 'history', label: 'History', icon: History },
+  { id: 'prompts', label: 'Prompts', icon: Terminal },
+  { id: 'settings', label: 'Settings', icon: Settings },
+];
 
+// ⚡ Bolt Optimization: Extract list item to memoized component to prevent re-rendering
+// inactive items when activeView changes.
+const SidebarItem = memo(({ item, isActive, onViewChange }) => {
+  return (
+    <button
+      onClick={() => onViewChange(item.id)}
+      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 font-[var(--font-body)] font-medium text-sm group relative overflow-hidden cursor-pointer ${
+        isActive
+          ? 'text-[var(--color-primary)] bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20'
+          : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-background)]'
+      }`}
+      style={{ minHeight: '44px' }}
+    >
+      <item.icon className={`w-5 h-5 transition-colors ${isActive ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)] group-hover:text-[var(--color-text)]'}`} />
+      <span className="relative z-10">{item.label}</span>
+
+      {isActive && (
+        <div className="absolute left-0 top-0 bottom-0 w-1 bg-[var(--color-primary)] rounded-r" />
+      )}
+    </button>
+  );
+});
+
+SidebarItem.displayName = 'SidebarItem';
+
+const Sidebar = memo(({ activeView, onViewChange, isOpen, onClose }) => {
   return (
     <>
       {/* Mobile Backdrop */}
@@ -36,27 +62,16 @@ const Sidebar = memo(({ activeView, onViewChange, isOpen, onClose }) => {
   
         {/* Navigation */}
         <nav className="flex-1 py-8 space-y-1 px-4">
-          {menuItems.map((item) => {
+          {MENU_ITEMS.map((item) => {
             const isActive = activeView === item.id || (item.id === 'input' && (activeView === 'questions' || activeView === 'blueprint' || activeView === 'mockup'));
             
             return (
-              <button
+              <SidebarItem
                 key={item.id}
-                onClick={() => onViewChange(item.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 font-[var(--font-body)] font-medium text-sm group relative overflow-hidden cursor-pointer ${
-                  isActive 
-                    ? 'text-[var(--color-primary)] bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20' 
-                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-background)]'
-                }`}
-                style={{ minHeight: '44px' }}
-              >
-                <item.icon className={`w-5 h-5 transition-colors ${isActive ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)] group-hover:text-[var(--color-text)]'}`} />
-                <span className="relative z-10">{item.label}</span>
-                
-                {isActive && (
-                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-[var(--color-primary)] rounded-r" />
-                )}
-              </button>
+                item={item}
+                isActive={isActive}
+                onViewChange={onViewChange}
+              />
             );
           })}
         </nav>
