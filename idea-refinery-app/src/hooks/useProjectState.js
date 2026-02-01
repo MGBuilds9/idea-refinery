@@ -165,7 +165,7 @@ export function useProjectState() {
     return true;
   }, []);
 
-  const handleGenerateQuestions = async (ideaOverride) => {
+  const handleGenerateQuestions = useCallback(async (ideaOverride) => {
     if (!checkApiKey()) return;
     setLoading(true);
     setLoadingMessage('Architect Agent: Structuring your idea...');
@@ -221,9 +221,9 @@ export function useProjectState() {
       setLoading(false);
       setLoadingMessage('');
     }
-  };
+  }, [checkApiKey, idea, saveProgress]);
 
-  const handleGenerateBlueprint = async () => {
+  const handleGenerateBlueprint = useCallback(async () => {
     if (!checkApiKey()) return;
     setLoading(true);
     setLoadingMessage('Architect Agent: Updating spec with your answers...');
@@ -273,7 +273,7 @@ export function useProjectState() {
       setLoading(false);
       setLoadingMessage('');
     }
-  };
+  }, [checkApiKey, questions, answers, ideaSpec, saveProgress]);
 
   const handleRefineBlueprint = useCallback(async (inputContent) => {
     if (!inputContent?.trim()) return;
@@ -362,27 +362,27 @@ export function useProjectState() {
     }
   }, [blueprint, chatHistory, checkApiKey, saveProgress, ideaSpec]);
 
-  const handleAcceptRefinement = async () => {
+  const handleAcceptRefinement = useCallback(async () => {
     if (!proposedSpec) return;
     const newMarkdown = compileToMarkdown(proposedSpec);
     setIdeaSpec(proposedSpec);
     setBlueprint(newMarkdown);
     setProposedSpec(null);
     await saveProgress({ ideaSpec: proposedSpec, blueprint: newMarkdown });
-  };
+  }, [proposedSpec, saveProgress]);
 
   const handleRejectRefinement = useCallback(() => {
     setProposedSpec(null);
   }, []);
 
-  const handleExportPackage = async (options) => {
+  const handleExportPackage = useCallback(async (options) => {
     if (!ideaSpec) return;
     
     // v1.5: Always download as a single ZIP package based on selected options
     ExportService.downloadZip(ideaSpec, blueprint, htmlMockup, options);
-  };
+  }, [ideaSpec, blueprint, htmlMockup]);
 
-  const handleGenerateMockup = async () => {
+  const handleGenerateMockup = useCallback(async () => {
     if (!checkApiKey()) return;
     setLoading(true);
     setLoadingMessage('Designer Agent: Creating high-fidelity mockup...');
@@ -425,7 +425,7 @@ export function useProjectState() {
       setLoading(false);
       setLoadingMessage('');
     }
-  };
+  }, [checkApiKey, ideaSpec, blueprint, saveProgress]);
 
   const handleViewChange = useCallback((view) => {
       if (view === 'input' && activeView !== 'input') {
