@@ -200,6 +200,18 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
+const optionalAuthenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (token == null) return next();
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (!err) req.user = user;
+    next();
+  });
+};
+
 // Apply auth middleware to API routes (excluding public ones handled inside)
 // Actually, it's better to apply it specifically to protected routes or use a wrapper.
 // For now, let's just expose the auth endpoints publicly and protect sync/ai endpoints if desired.
@@ -418,17 +430,22 @@ app.get('/api/sync/pull', authenticateToken, async (req, res) => {
 });
 
 // Prompt Overrides Sync
-// GET is public (no auth) - allows fetching default prompts
-// POST/reset require auth (handled by global middleware)
-app.get('/api/prompts', async (req, res) => {
+// GET is semi-protected: returns defaults for guest, overrides for user
+app.get('/api/prompts', optionalAuthenticateToken, async (req, res) => {
   try {
-    const result = await pool.query('SELECT type, content, updated_at FROM prompt_overrides');
-    const overrides = {};
-    result.rows.forEach(row => {
-      overrides[row.type] = row;
-    });
+    let overrides = {};
+    if (req.user) {
+      // Fetch user-scoped overrides
+      const result = await pool.query(
+        'SELECT type, content, updated_at FROM prompt_overrides WHERE user_id = $1',
+        [req.user.id]
+      );
+      result.rows.forEach(row => {
+        overrides[row.type] = row;
+      });
+    }
 
-    // Merge defaults with overrides
+    // Merge defaults with overrides (if any)
     const prompts = Object.keys(DEFAULT_PROMPTS).map(type => {
       if (overrides[type]) {
         return overrides[type];
@@ -443,27 +460,28 @@ app.get('/api/prompts', async (req, res) => {
     res.json(prompts);
   } catch (e) {
     console.error('Prompts fetch error:', e);
-    console.error('Stack trace:', e.stack);
-    res.status(500).json({ error: 'Failed to fetch prompts', details: e.message });
+    res.status(500).json({ error: 'Failed to fetch prompts' });
   }
 });
 
 app.post('/api/prompts', authenticateToken, async (req, res) => {
   const { type, content } = req.body;
+  const userId = req.user.id;
 
   if (!type || !content) {
     return res.status(400).json({ error: 'Type and content required' });
   }
 
   try {
+    // Security: Scope prompt override to the user
     const result = await pool.query(
-      `INSERT INTO prompt_overrides (type, content, updated_at) 
-       VALUES ($1, $2, NOW()) 
-       ON CONFLICT (type) DO UPDATE SET 
+      `INSERT INTO prompt_overrides (user_id, type, content, updated_at)
+       VALUES ($1, $2, $3, NOW())
+       ON CONFLICT (user_id, type) DO UPDATE SET
          content = EXCLUDED.content, 
          updated_at = NOW() 
        RETURNING *`,
-      [type, content]
+      [userId, type, content]
     );
     res.json(result.rows[0]);
   } catch (e) {
@@ -474,21 +492,24 @@ app.post('/api/prompts', authenticateToken, async (req, res) => {
 
 app.post('/api/prompts/reset', authenticateToken, async (req, res) => {
   const { type } = req.body;
+  const userId = req.user.id;
+
   if (!type) return res.status(400).json({ error: 'Type required' });
 
   try {
-    // We don't actually delete, we just reset to default.
-    // But since we are only storing overrides, we can just update it to the hardcoded default?
-    // Actually, if we delete the row, we need a way to fall back.
-    // The requirement says "preloaded into the database".
-    // So "Reset" means "Update DB row back to original default string".
+    // Hard delete the override to revert to default
+    const result = await pool.query(
+      `DELETE FROM prompt_overrides WHERE user_id = $1 AND type = $2 RETURNING *`,
+      [userId, type]
+    );
 
+    // Return the default prompt as the response
     if (DEFAULT_PROMPTS[type]) {
-      const result = await pool.query(
-        `UPDATE prompt_overrides SET content = $1, updated_at = NOW() WHERE type = $2 RETURNING *`,
-        [DEFAULT_PROMPTS[type], type]
-      );
-      res.json(result.rows[0]);
+      res.json({
+        type,
+        content: DEFAULT_PROMPTS[type],
+        updated_at: new Date()
+      });
     } else {
       res.status(400).json({ error: 'Unknown prompt type' });
     }

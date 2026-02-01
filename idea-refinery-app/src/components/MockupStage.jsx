@@ -122,6 +122,7 @@ const MockupStage = memo(function MockupStage({
                 srcDoc={htmlMockup}
                 className="w-full h-[600px] border-0"
                 title="HTML Mockup Preview"
+                sandbox="allow-scripts"
               />
             </div>
             
