@@ -99,6 +99,27 @@ const initDb = async () => {
       // Seed default admin if no users exist
       // Security Hardening: Do NOT create default admin with hardcoded password automatically in production.
       // Only create if explicitly requested via environment variable.
+      // Migration: Add user_id to prompt_overrides and scope uniqueness to user
+      try {
+        await client.query(`
+          ALTER TABLE prompt_overrides
+          ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES users(id) ON DELETE CASCADE
+        `);
+
+        await client.query(`
+          ALTER TABLE prompt_overrides
+          DROP CONSTRAINT IF EXISTS prompt_overrides_type_key
+        `);
+
+        await client.query(`
+          CREATE UNIQUE INDEX IF NOT EXISTS idx_prompt_overrides_user_type
+          ON prompt_overrides(user_id, type)
+        `);
+        console.log('✅ Migrated prompt_overrides to user scope');
+      } catch (e) {
+        console.warn('⚠️ Migration warning:', e.message);
+      }
+
       if (process.env.SEED_DEFAULT_ADMIN === 'true') {
         const userCheck = await client.query('SELECT count(*) FROM users');
         if (parseInt(userCheck.rows[0].count) === 0) {
