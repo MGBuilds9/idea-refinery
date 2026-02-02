@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { llm } from '../lib/llm';
 import { saveConversation, getRecentConversations, deleteConversation } from '../services/db';
 import { SyncService } from '../services/SyncService';
@@ -39,6 +39,19 @@ export function useProjectState() {
   const [publicBlueprintId, setPublicBlueprintId] = useState(null);
   const [initializing, setInitializing] = useState(true);
   const [, setIsExportModalOpen] = useState(false);
+
+  // ⚡ Bolt Optimization: Refs to hold latest state for stable callbacks
+  const activeViewRef = useRef(activeView);
+  const stateRef = useRef({
+    idea, questions, answers, blueprint, htmlMockup, masterPrompt, ideaSpec, chatHistory
+  });
+
+  useEffect(() => {
+    activeViewRef.current = activeView;
+    stateRef.current = {
+      idea, questions, answers, blueprint, htmlMockup, masterPrompt, ideaSpec, chatHistory
+    };
+  }, [activeView, idea, questions, answers, blueprint, htmlMockup, masterPrompt, ideaSpec, chatHistory]);
 
   // Check for public share URL on mount
   useEffect(() => {
@@ -108,16 +121,10 @@ export function useProjectState() {
   // Save helper
   const saveProgress = useCallback(async (updates) => {
     try {
+        const currentState = stateRef.current;
         const fullData = {
             id: currentDbId,
-            idea,
-            questions,
-            answers,
-            blueprint,
-            htmlMockup,
-            masterPrompt,
-            ideaSpec,
-            chatHistory,
+            ...currentState,
             ...updates
         };
         const id = await saveConversation(fullData);
@@ -152,7 +159,7 @@ export function useProjectState() {
     } catch (e) {
         console.error('Failed to auto-save:', e);
     }
-  }, [currentDbId, idea, questions, answers, blueprint, htmlMockup, masterPrompt, ideaSpec, chatHistory]);
+  }, [currentDbId]);
 
   // Helper to ensure API key exists
   const checkApiKey = useCallback((p) => {
@@ -171,7 +178,7 @@ export function useProjectState() {
     setLoadingMessage('Architect Agent: Structuring your idea...');
     
     // Use override if provided (e.g. from InputStage local state), otherwise use state
-    const currentIdea = typeof ideaOverride === 'string' ? ideaOverride : idea;
+    const currentIdea = typeof ideaOverride === 'string' ? ideaOverride : stateRef.current.idea;
 
     try {
       const provider = llm.getDefaultProvider();
@@ -221,7 +228,7 @@ export function useProjectState() {
       setLoading(false);
       setLoadingMessage('');
     }
-  }, [checkApiKey, idea, saveProgress]);
+  }, [checkApiKey, saveProgress]);
 
   const handleGenerateBlueprint = useCallback(async () => {
     if (!checkApiKey()) return;
@@ -234,14 +241,16 @@ export function useProjectState() {
       const apiKey = llm.getApiKey(provider);
       const orchestrator = createOrchestrator({ provider, apiKey });
       
+      const { questions: currQuestions, answers: currAnswers, ideaSpec: currIdeaSpec } = stateRef.current;
+
       // Convert answers array to QA pairs
-      const qaPairs = questions.map((q, i) => ({
+      const qaPairs = currQuestions.map((q, i) => ({
         question: q,
-        answer: answers[i]
+        answer: currAnswers[i]
       }));
 
       // Fill gaps in the spec
-      const updatedSpec = await orchestrator.fillGaps(ideaSpec, qaPairs);
+      const updatedSpec = await orchestrator.fillGaps(currIdeaSpec, qaPairs);
       setIdeaSpec(updatedSpec);
 
       // Compile to Markdown
@@ -262,7 +271,7 @@ export function useProjectState() {
          ideaSpec: updatedSpec,
          blueprint: markdown, 
          masterPrompt: promptPreview,
-         answers 
+         answers: currAnswers
       });
 
       setStage('blueprint');
@@ -273,7 +282,7 @@ export function useProjectState() {
       setLoading(false);
       setLoadingMessage('');
     }
-  }, [checkApiKey, questions, answers, ideaSpec, saveProgress]);
+  }, [checkApiKey, saveProgress]);
 
   const handleRefineBlueprint = useCallback(async (inputContent) => {
     if (!inputContent?.trim()) return;
@@ -285,8 +294,10 @@ export function useProjectState() {
     setLoadingMessage('Refining blueprint...');
 
     try {
+      const { ideaSpec: currIdeaSpec, blueprint: currBlueprint, chatHistory: currChatHistory } = stateRef.current;
+
       // If we have an IdeaSpec, use the Relational Refinement (v1.5)
-      if (ideaSpec) {
+      if (currIdeaSpec) {
         const serverUrl = localStorage.getItem('server_url') || 
           (window.location.hostname === 'localhost' ? 'http://localhost:3001' : window.location.origin);
         
@@ -297,7 +308,7 @@ export function useProjectState() {
             'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
           },
           body: JSON.stringify({
-            idea: `CURRENT SPEC: ${JSON.stringify(ideaSpec)}\n\nUSER REQUEST: ${inputContent}`,
+            idea: `CURRENT SPEC: ${JSON.stringify(currIdeaSpec)}\n\nUSER REQUEST: ${inputContent}`,
             provider: llm.getDefaultProvider(),
             apiKey: llm.getApiKey(llm.getDefaultProvider()),
             model: llm.getModelForStage('refinement')
@@ -320,7 +331,7 @@ export function useProjectState() {
       } else {
         // Legacy refinement
         const { system } = PromptService.get('refine', { refinementInput: inputContent });
-        const prompt = `CURRENT BLUEPRINT:\n${blueprint}\n\nUSER REQUEST: ${inputContent}`;
+        const prompt = `CURRENT BLUEPRINT:\n${currBlueprint}\n\nUSER REQUEST: ${inputContent}`;
         const model = llm.getModelForStage('refinement');
 
         const currentProvider = llm.getDefaultProvider();
@@ -329,7 +340,7 @@ export function useProjectState() {
             prompt,
             model,
             maxTokens: 8000,
-            history: chatHistory 
+            history: currChatHistory
         });
         
         const sections = responseText.split('## Master Takeoff Prompt');
@@ -344,7 +355,7 @@ export function useProjectState() {
         };
         
         setConversation(prev => [...prev, assistantMsg]);
-        const newChatHistory = [...chatHistory, { ...userMsg, timestamp: Date.now() - 1000 }, assistantMsg];
+        const newChatHistory = [...currChatHistory, { ...userMsg, timestamp: Date.now() - 1000 }, assistantMsg];
         setChatHistory(newChatHistory);
 
         await saveProgress({ 
@@ -360,7 +371,7 @@ export function useProjectState() {
       setLoading(false);
       setLoadingMessage('');
     }
-  }, [blueprint, chatHistory, checkApiKey, saveProgress, ideaSpec]);
+  }, [checkApiKey, saveProgress]);
 
   const handleAcceptRefinement = useCallback(async () => {
     if (!proposedSpec) return;
@@ -393,11 +404,12 @@ export function useProjectState() {
       const orchestrator = createOrchestrator({ provider, apiKey });
       
       let html = '';
+      const { ideaSpec: currIdeaSpec, blueprint: currBlueprint } = stateRef.current;
       
-      if (ideaSpec) {
-        html = await orchestrator.generateMockup(ideaSpec);
+      if (currIdeaSpec) {
+        html = await orchestrator.generateMockup(currIdeaSpec);
       } else {
-        const { system, prompt } = PromptService.get('mockup', { blueprint });
+        const { system, prompt } = PromptService.get('mockup', { blueprint: currBlueprint });
         const currentProvider = llm.getDefaultProvider();
         const model = llm.getModelForStage('mockup');
         html = await llm.generate(currentProvider, { system, prompt, model, maxTokens: 8000 });
@@ -409,7 +421,7 @@ export function useProjectState() {
          const insertPoint = html.lastIndexOf('</body>');
          if (insertPoint !== -1) {
             const extra = `
-     <div style="display:none;"><pre id="markdown-content">${blueprint.replace(/</g, '&lt;')}</pre></div>
+     <div style="display:none;"><pre id="markdown-content">${currBlueprint.replace(/</g, '&lt;')}</pre></div>
             `;
             html = html.slice(0, insertPoint) + extra + html.slice(insertPoint);
          }
@@ -425,12 +437,14 @@ export function useProjectState() {
       setLoading(false);
       setLoadingMessage('');
     }
-  }, [checkApiKey, ideaSpec, blueprint, saveProgress]);
+  }, [checkApiKey, saveProgress]);
 
   const handleViewChange = useCallback((view) => {
-      if (view === 'input' && activeView !== 'input') {
+      const currentActiveView = activeViewRef.current;
+
+      if (view === 'input' && currentActiveView !== 'input') {
           // Switching back to project view, keep state
-      } else if (view === 'input' && activeView === 'input') {
+      } else if (view === 'input' && currentActiveView === 'input') {
           if (confirm('Start a new project? Unsaved progress will be lost if not autosaved.')) {
             setIdea('');
             setQuestions([]);
@@ -451,7 +465,7 @@ export function useProjectState() {
       }
 
       setActiveView(view);
-  }, [activeView, loadHistory]);
+  }, [loadHistory]);
 
   return {
     state: {
