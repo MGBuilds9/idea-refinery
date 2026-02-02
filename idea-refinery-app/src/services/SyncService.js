@@ -72,7 +72,10 @@ export const SyncService = {
       if (result.items && Array.isArray(result.items)) {
           // Process incoming items
           let updateCount = 0;
-          
+          const conversationBatch = [];
+
+          // ⚡ Bolt Optimization: Collect items for batch insert to avoid N+1 IndexedDB transactions.
+          // bulkPut is significantly faster than sequential put calls.
           for (const item of result.items) {
               if (item.type === 'conversation') {
                   try {
@@ -81,36 +84,8 @@ export const SyncService = {
                           ? JSON.parse(item.content) 
                           : item.content;
                       
-                      // Fix ID if needed (server strings vs dexie numbers)
-                      // If Dexie uses ++id, we might have issues syncing IDs.
-                      // Ideally, we move to UUIDs. 
-                      // For now, let's assume conversationData contains the real ID logic or we just append.
-                      
-                      // Actually, 'saveConversation' in db.js handles upsert.
-                      // But careful about ID conflicts if ID is number vs string.
-                      // If server item has an ID, we should respect it? 
-                      // Dexie 'conversations' table is ++id (auto-increment).
-                      // We might need to handle this carefully.
-                      // STRATEGY: 
-                      // 1. Check if we have a conversation with this 'idea' and similar timestamp?
-                      // 2. Or just force save.
-                      
-                      // Let's use the content as truth.
                       if (conversationData) {
-                          // FORCE ID from server if possible, or let Dexie handle it if it was null?
-                          // If it came from another client, it might have an ID we don't know.
-                          // For simplicity in v1.2: We just save it. 
-                          // If the Local ID was numeric, and server sent us a UUID string, Dexie will barf on ++id potentially?
-                          // Checked db.js: conversations: '++id...'
-                          // So ID must be number.
-                          // If data.id is string (from server), we might need to ignore it and rely on content?
-                          // Or we matched by idea+timestamp.
-                          
-                          // Let's try to save. 'saveConversation' checks data.id. 
-                          // If we pull from server, we want to replicate.
-                          
-                          await db.conversations.put(conversationData);
-                          updateCount++;
+                          conversationBatch.push(conversationData);
                       }
                   } catch (parseErr) {
                       console.error('Failed to parse item content:', parseErr);
@@ -118,7 +93,9 @@ export const SyncService = {
               }
           }
           
-          if (updateCount > 0) {
+          if (conversationBatch.length > 0) {
+              await db.conversations.bulkPut(conversationBatch);
+              updateCount = conversationBatch.length;
               console.log(`[Sync] Pulled ${updateCount} items.`);
               return true; // Signal that updates occurred
           }
