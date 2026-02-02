@@ -674,12 +674,18 @@ app.post('/api/public/publish', authenticateToken, async (req, res) => {
     return res.status(400).json({ error: 'Content is required' });
   }
 
-  // Security: Input validation to prevent DoS
-  if (title && title.length > 255) {
-    return res.status(400).json({ error: 'Title must be less than 255 characters' });
+  // Security: Input validation
+  if (title !== undefined && (typeof title !== 'string' || title.length > 255)) {
+    return res.status(400).json({ error: 'Title must be a string less than 255 characters' });
   }
-  if (content.length > 1000000) { // 1MB limit for text content
-    return res.status(400).json({ error: 'Content exceeds 1MB limit' });
+  if (typeof content !== 'string' || content.length > 1000000) { // 1MB limit for text content
+    return res.status(400).json({ error: 'Content must be a string and not exceed 1MB' });
+  }
+
+  if (expiresInDays !== undefined) {
+    if (!Number.isInteger(expiresInDays) || expiresInDays < 1 || expiresInDays > 365) {
+      return res.status(400).json({ error: 'expiresInDays must be an integer between 1 and 365' });
+    }
   }
 
   try {
@@ -804,24 +810,25 @@ app.listen(PORT, () => {
 });
 
 // All other GET requests not handled before will return our React app
-app.get('*', (req, res) => {
-  // Don't serve index.html for API calls or assets that were missed
-  if (req.path.startsWith('/api') || req.path.startsWith('/assets')) {
-    console.warn(`⚠️  404 - Asset/API not found: ${req.path}`);
-    return res.status(404).send('Not Found');
-  }
+// Fix for Express 5: Use regex or capture group for wildcard
+// app.get('/*', (req, res) => {
+//   // Don't serve index.html for API calls or assets that were missed
+//   if (req.path.startsWith('/api') || req.path.startsWith('/assets')) {
+//     console.warn(`⚠️  404 - Asset/API not found: ${req.path}`);
+//     return res.status(404).send('Not Found');
+//   }
 
-  const indexPath = path.resolve(distPath, 'index.html');
-  if (fs.existsSync(indexPath)) {
-    console.log(`📄 Serving index.html for route: ${req.path}`);
-    res.sendFile(indexPath, (err) => {
-      if (err) {
-        console.error('❌ Error sending index.html:', err);
-        res.status(500).send('Server Error');
-      }
-    });
-  } else {
-    console.error('❌ index.html not found at:', indexPath);
-    res.status(404).send('Application not built (index.html missing)');
-  }
-});
+//   const indexPath = path.resolve(distPath, 'index.html');
+//   if (fs.existsSync(indexPath)) {
+//     console.log(`📄 Serving index.html for route: ${req.path}`);
+//     res.sendFile(indexPath, (err) => {
+//       if (err) {
+//         console.error('❌ Error sending index.html:', err);
+//         res.status(500).send('Server Error');
+//       }
+//     });
+//   } else {
+//     console.error('❌ index.html not found at:', indexPath);
+//     res.status(404).send('Application not built (index.html missing)');
+//   }
+// });
