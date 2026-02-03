@@ -639,13 +639,15 @@ app.post('/api/gemini', async (req, res) => {
   }
 
   const modelName = model || 'gemini-1.5-pro';
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+  // Security: Pass API key in header, not URL to prevent leakage in logs
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
 
   try {
     const response = await fetch(url, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey
       },
       body: JSON.stringify(body)
     });
