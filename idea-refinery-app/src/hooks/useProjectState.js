@@ -230,7 +230,7 @@ export function useProjectState() {
     }
   }, [checkApiKey, saveProgress]);
 
-  const handleGenerateBlueprint = useCallback(async () => {
+  const handleGenerateBlueprint = useCallback(async (answersOverride) => {
     if (!checkApiKey()) return;
     setLoading(true);
     setLoadingMessage('Architect Agent: Updating spec with your answers...');
@@ -241,7 +241,9 @@ export function useProjectState() {
       const apiKey = llm.getApiKey(provider);
       const orchestrator = createOrchestrator({ provider, apiKey });
       
-      const { questions: currQuestions, answers: currAnswers, ideaSpec: currIdeaSpec } = stateRef.current;
+      const { questions: currQuestions, answers: stashedAnswers, ideaSpec: currIdeaSpec } = stateRef.current;
+      // ⚡ Bolt Optimization: Use override if provided (e.g. from QuestionsStage local state) to ensure latest data
+      const currAnswers = answersOverride || stashedAnswers;
 
       // Convert answers array to QA pairs
       const qaPairs = currQuestions.map((q, i) => ({
