@@ -4,20 +4,20 @@ import Sidebar from './components/Sidebar';
 import BottomNav from './components/BottomNav';
 import InputStage from './components/InputStage';
 import QuestionsStage from './components/QuestionsStage';
-import SettingsView from './components/SettingsView';
-import HistoryView from './components/HistoryView';
 import PinLockScreen from './components/PinLockScreen';
 import LoginScreen from './components/LoginScreen';
-import OnboardingView from './components/OnboardingView';
-import PromptStudio from './components/PromptStudio';
 import TokenUsage from './components/TokenUsage';
 import { PROMPT_PERSONAS } from './components/PromptSelector';
-import PublicBlueprintView from './components/PublicBlueprintView';
 import { ThemeProvider } from './contexts/ThemeContext';
 
-// Lazy load heavy stages
+// Lazy load heavy stages and views
 const BlueprintStage = React.lazy(() => import('./components/BlueprintStage'));
 const MockupStage = React.lazy(() => import('./components/MockupStage'));
+const SettingsView = React.lazy(() => import('./components/SettingsView'));
+const HistoryView = React.lazy(() => import('./components/HistoryView'));
+const PromptStudio = React.lazy(() => import('./components/PromptStudio'));
+const OnboardingView = React.lazy(() => import('./components/OnboardingView'));
+const PublicBlueprintView = React.lazy(() => import('./components/PublicBlueprintView'));
 import { llm } from './lib/llm';
 import { cleanupOldConversations, pullItems } from './services/db';
 import { PromptService } from './services/PromptService';
@@ -174,7 +174,9 @@ function App() {
         )}
 
         {!initializing && publicBlueprintId && (
-          <PublicBlueprintView blueprintId={publicBlueprintId} />
+          <Suspense fallback={<div className="min-h-screen bg-[var(--color-background)] flex items-center justify-center text-[var(--color-text-muted)]">Loading Blueprint...</div>}>
+            <PublicBlueprintView blueprintId={publicBlueprintId} />
+          </Suspense>
         )}
 
         {!initializing && !publicBlueprintId && checkingLock && (
@@ -187,7 +189,9 @@ function App() {
         )}
 
         {!initializing && !publicBlueprintId && !checkingLock && isOnboarding && (
-          <OnboardingView onComplete={handleOnboardingComplete} />
+          <Suspense fallback={<div className="min-h-screen bg-[var(--color-background)] flex items-center justify-center text-[var(--color-text-muted)]">Loading Onboarding...</div>}>
+            <OnboardingView onComplete={handleOnboardingComplete} />
+          </Suspense>
         )}
 
         {/* Main App Flow (Only if not onboarding or public blueprint) */}
@@ -246,21 +250,27 @@ function App() {
 
                   {/* Views */}
                   {activeView === 'settings' && (
-                    <SettingsView />
+                    <Suspense fallback={<div className="text-center font-mono py-20 text-[var(--color-text-muted)]">Loading Settings...</div>}>
+                      <SettingsView />
+                    </Suspense>
                   )}
 
                   {activeView === 'prompts' && (
-                    <PromptStudio />
+                    <Suspense fallback={<div className="text-center font-mono py-20 text-[var(--color-text-muted)]">Loading Studio...</div>}>
+                      <PromptStudio />
+                    </Suspense>
                   )}
 
                   {activeView === 'history' && (
-                    <HistoryView
-                      historyItems={historyItems}
-                      hasMore={hasMoreHistory}
-                      onLoad={handleLoadSession}
-                      onDelete={handleDeleteSession}
-                      onLoadMore={handleLoadMore}
-                    />
+                    <Suspense fallback={<div className="text-center font-mono py-20 text-[var(--color-text-muted)]">Loading History...</div>}>
+                      <HistoryView
+                        historyItems={historyItems}
+                        hasMore={hasMoreHistory}
+                        onLoad={handleLoadSession}
+                        onDelete={handleDeleteSession}
+                        onLoadMore={handleLoadMore}
+                      />
+                    </Suspense>
                   )}
 
                   {activeView === 'input' && (
