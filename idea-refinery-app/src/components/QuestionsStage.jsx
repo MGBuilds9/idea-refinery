@@ -1,36 +1,59 @@
-import React, { useState, useCallback, memo } from 'react';
+import React, { useState, useEffect, useCallback, memo } from 'react';
 import { FileText, ArrowRight, ArrowLeft, SkipForward, Check } from 'lucide-react';
 import QuestionItem from './QuestionItem';
 
 const QuestionsStage = memo(function QuestionsStage({ questions, answers, setAnswers, onNext, onBack, loading }) {
   const [currentIndex, setCurrentIndex] = useState(0);
 
+  // ⚡ Bolt Optimization: Local state for answers to prevent global re-renders on every keystroke
+  const [localAnswers, setLocalAnswers] = useState(answers);
+
+  useEffect(() => {
+    setLocalAnswers(answers);
+  }, [answers]);
+
   const handleAnswerChange = useCallback((index, value) => {
-    setAnswers(prev => ({ ...prev, [index]: value }));
-  }, [setAnswers]);
+    setLocalAnswers(prev => ({ ...prev, [index]: value }));
+  }, []);
+
+  const handleBlur = useCallback(() => {
+      setAnswers(localAnswers);
+  }, [localAnswers, setAnswers]);
 
   const handleNext = () => {
+    // Checkpoint save
+    setAnswers(localAnswers);
+
     if (currentIndex < questions.length - 1) {
       setCurrentIndex(prev => prev + 1);
     } else {
-      onNext();
+      onNext(localAnswers);
     }
   };
 
   const handleSkip = () => {
+    let currentAnswers = localAnswers;
     // Ensure the current answer is empty string if undefined (explicit skip)
-    if (!answers[currentIndex]) {
-      handleAnswerChange(currentIndex, '');
+    if (!currentAnswers[currentIndex]) {
+      const newAnswers = { ...currentAnswers, [currentIndex]: '' };
+      setLocalAnswers(newAnswers);
+      currentAnswers = newAnswers;
     }
     
+    // Checkpoint save
+    setAnswers(currentAnswers);
+
     if (currentIndex < questions.length - 1) {
       setCurrentIndex(prev => prev + 1);
     } else {
-      onNext();
+      onNext(currentAnswers);
     }
   };
 
   const handleBack = () => {
+    // Checkpoint save
+    setAnswers(localAnswers);
+
     if (currentIndex > 0) {
       setCurrentIndex(prev => prev - 1);
     } else {
@@ -39,7 +62,8 @@ const QuestionsStage = memo(function QuestionsStage({ questions, answers, setAns
   };
 
   const currentQuestion = questions[currentIndex];
-  const currentAnswer = answers[currentIndex] || '';
+  // Use local answers for rendering
+  const currentAnswer = localAnswers[currentIndex] || '';
   const isLastQuestion = currentIndex === questions.length - 1;
   const progress = ((currentIndex + 1) / questions.length) * 100;
 
@@ -77,6 +101,7 @@ const QuestionsStage = memo(function QuestionsStage({ questions, answers, setAns
                 answer={currentAnswer}
                 index={currentIndex}
                 onAnswerChange={handleAnswerChange}
+                onBlur={handleBlur}
                 autoFocus={true}
               />
           </div>
