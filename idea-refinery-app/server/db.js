@@ -64,7 +64,11 @@ const initDb = async () => {
           expires_at TIMESTAMPTZ,
           view_count INT DEFAULT 0
         );
-        CREATE INDEX IF NOT EXISTS idx_public_blueprints_id ON public_blueprints(id);
+        -- ⚡ Bolt Optimization: Add index for user's public blueprints list (with ordering)
+        CREATE INDEX IF NOT EXISTS idx_public_blueprints_user_list ON public_blueprints(user_id, created_at DESC);
+
+        -- ⚡ Bolt Optimization: Drop redundant index on primary key (id)
+        DROP INDEX IF EXISTS idx_public_blueprints_id;
 
         -- Blueprint v1.5 Relational Schema
         CREATE TABLE IF NOT EXISTS projects (
