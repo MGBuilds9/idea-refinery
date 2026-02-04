@@ -43,3 +43,8 @@
 **Vulnerability:** The `/api/auth/change-password` endpoint allowed changing the password without providing the current password, enabling session hijackers to permanently take over accounts.
 **Learning:** Authentication endpoints must always follow the "trust but verify" principle. Possession of a session token proves identity but not intent for destructive actions (like password change). Re-authentication (via old password) is mandatory for sensitive account changes.
 **Prevention:** Enforce `oldPassword` verification on all password change endpoints. Update frontend UI to collect this information.
+
+## 2026-03-04 - Sensitive Data Exposure in Outbound Requests
+**Vulnerability:** The Gemini API proxy passed the API key in the URL query string (`?key=...`). This exposes the key in proxy logs, browser history (if client-side), and server access logs.
+**Learning:** Even server-to-server calls can leak secrets if they are put in URLs. APIs often support header-based auth (`Authorization` or custom headers like `x-goog-api-key`) which is much safer as headers are typically encrypted in transit and not logged by default.
+**Prevention:** Always prefer HTTP headers over URL parameters for sensitive data (API keys, tokens, PII). Check API documentation for header-based authentication options.
