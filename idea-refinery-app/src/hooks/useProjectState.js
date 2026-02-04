@@ -122,19 +122,30 @@ export function useProjectState() {
   const saveProgress = useCallback(async (updates) => {
     try {
         const currentState = stateRef.current;
+
+        // ⚡ Bolt Optimization: Use partial updates for DB when ID exists
+        // This avoids re-serializing and re-writing heavy unchanged fields (like mockups/blueprints) to IndexedDB.
+        let id;
+        if (currentDbId) {
+            id = await saveConversation({ id: currentDbId, ...updates });
+        } else {
+            const initialData = { ...currentState, ...updates };
+            id = await saveConversation(initialData);
+            setCurrentDbId(id);
+        }
+
+        // Construct full data for Sync and Optimistic UI updates
         const fullData = {
-            id: currentDbId,
+            id,
             ...currentState,
             ...updates
         };
-        const id = await saveConversation(fullData);
-        setCurrentDbId(id);
 
         // Auto-sync to server if in server mode
         const syncMode = localStorage.getItem('sync_mode');
         const serverUrl = localStorage.getItem('server_url');
         if (syncMode === 'server' && serverUrl) {
-           SyncService.push(serverUrl, { ...fullData, id }).catch(console.error);
+           SyncService.push(serverUrl, fullData).catch(console.error);
         }
         
         // ⚡ Bolt Optimization: Manually update history state instead of re-fetching all items from DB.
@@ -144,7 +155,6 @@ export function useProjectState() {
             // Use existing timestamp if present (maintain creation time), but update lastUpdated
             const newItem = {
                 ...fullData,
-                id,
                 lastUpdated: now,
                 timestamp: fullData.timestamp || now
             };
