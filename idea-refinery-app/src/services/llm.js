@@ -40,14 +40,23 @@ export async function generateCompletion({ provider, apiKey, model, messages, ma
 
 const PROXY_URL = 'http://localhost:3001/api';
 
+const getToken = () => localStorage.getItem('auth_token');
+
 async function callAnthropic({ apiKey, model, messages, maxTokens, system }) {
   // Use proxy
+  const headers = {
+    "Content-Type": "application/json",
+    "x-api-key": apiKey
+  };
+
+  const token = getToken();
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
   const response = await fetch(`${PROXY_URL}/anthropic`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey
-    },
+    headers,
     body: JSON.stringify({
       model: model || DEFAULT_MODELS[LLM_PROVIDERS.ANTHROPIC],
       max_tokens: maxTokens,
@@ -94,9 +103,15 @@ async function callGemini({ apiKey, model, messages, maxTokens, system }) {
     };
   }
 
+  const headers = { "Content-Type": "application/json" };
+  const token = getToken();
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
   const response = await fetch(`${PROXY_URL}/gemini`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify(body)
   });
 
@@ -119,12 +134,20 @@ async function callOpenAI({ apiKey, model, messages, maxTokens, system }) {
     msgs.unshift({ role: 'system', content: system });
   }
 
+  const headers = {
+    "Content-Type": "application/json",
+    // Security Fix: Use x-api-key to avoid conflict with JWT Authorization header
+    "x-api-key": apiKey
+  };
+
+  const token = getToken();
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
   const response = await fetch(`${PROXY_URL}/openai`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKey}`
-    },
+    headers,
     body: JSON.stringify({
       model: model || DEFAULT_MODELS[LLM_PROVIDERS.OPENAI],
       messages: msgs,

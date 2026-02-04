@@ -602,17 +602,33 @@ app.post('/api/anthropic', async (req, res) => {
 
 // OpenAI Proxy
 app.post('/api/openai', async (req, res) => {
-  const authHeader = req.headers['authorization'];
-  if (!authHeader) {
-    return res.status(400).json({ error: 'Authorization header required' });
+  // Security Fix: Support x-api-key to avoid conflict with JWT Authorization header
+  let apiKey = req.headers['x-api-key'];
+
+  // Fallback to Authorization header if x-api-key is missing
+  if (!apiKey && req.headers['authorization']) {
+    // Careful not to treat "Bearer <JWT>" as the API key if it's the JWT
+    // If the middleware verified it as a JWT, then req.user is set.
+    // If req.user is set, req.headers['authorization'] IS the JWT.
+    // So we should NOT use it as the OpenAI Key.
+    if (!req.user) {
+       apiKey = req.headers['authorization'].replace('Bearer ', '');
+    }
   }
+
+  if (!apiKey) {
+    return res.status(400).json({ error: 'API key required (use x-api-key header)' });
+  }
+
+  // Ensure 'Bearer' prefix if missing (OpenAI requires it)
+  const authValue = apiKey.startsWith('Bearer ') ? apiKey : `Bearer ${apiKey}`;
 
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': authHeader
+        'Authorization': authValue
       },
       body: JSON.stringify(req.body)
     });
