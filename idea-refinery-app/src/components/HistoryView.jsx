@@ -1,6 +1,7 @@
 import React, { useState, useCallback, memo } from 'react';
 import { History } from 'lucide-react';
 import HistoryItem from './HistoryItem';
+import { getConversation } from '../services/db';
 
 // Get artifact type and content for email
 const getArtifactContent = (item) => {
@@ -29,7 +30,7 @@ const HistoryView = ({ historyItems, onLoad, onDelete, onLoadMore, hasMore }) =>
 
   const handleEmail = useCallback(async (e, item) => {
     e.stopPropagation();
-    const { type, content } = getArtifactContent(item);
+    const { type } = getArtifactContent(item);
     
     if (!confirm(`Email this ${type.toLowerCase()} to yourself?`)) return;
     
@@ -37,6 +38,14 @@ const HistoryView = ({ historyItems, onLoad, onDelete, onLoadMore, hasMore }) =>
     setEmailSuccess(null);
     
     try {
+      // ⚡ Bolt Optimization: Lazy load full content if this is a summary
+      let fullItem = item;
+      if (item.isSummary) {
+          const loaded = await getConversation(item.id);
+          if (loaded) fullItem = loaded;
+      }
+      const { content } = getArtifactContent(fullItem);
+
       const { llm } = await import('../lib/llm');
       const { SecureStorage } = await import('../services/secure_storage');
       

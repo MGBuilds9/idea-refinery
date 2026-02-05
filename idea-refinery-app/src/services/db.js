@@ -49,13 +49,35 @@ export const saveConversation = async (data) => {
  * @param {number} offset - Number of items to skip (default 0)
  * @returns {Promise<Array>}
  */
+/**
+ * Get a single conversation by ID
+ * @param {number} id
+ * @returns {Promise<Object>}
+ */
+export const getConversation = async (id) => {
+  return await db.conversations.get(id);
+};
+
 export const getRecentConversations = async (limit = 50, offset = 0) => {
-  return await db.conversations
+  const items = await db.conversations
     .orderBy('lastUpdated')
     .reverse()
     .offset(offset)
     .limit(limit)
     .toArray();
+
+  // ⚡ Bolt Optimization: Return lightweight summaries to reduce memory usage
+  return items.map(item => ({
+    ...item,
+    htmlMockup: undefined,
+    ideaSpec: undefined,
+    chatHistory: undefined,
+    masterPrompt: undefined,
+    answers: undefined,
+    // Keep truncated blueprint for UI snippet
+    blueprint: item.blueprint ? item.blueprint.substring(0, 300) : '',
+    isSummary: true
+  }));
 };
 
 /**

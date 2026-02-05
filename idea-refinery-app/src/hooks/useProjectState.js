@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { llm } from '../lib/llm';
-import { saveConversation, getRecentConversations, deleteConversation } from '../services/db';
+import { saveConversation, getRecentConversations, deleteConversation, getConversation } from '../services/db';
 import { SyncService } from '../services/SyncService';
 import { PromptService } from '../services/PromptService';
 import { createOrchestrator } from '../services/AgentOrchestrator';
@@ -83,26 +83,46 @@ export function useProjectState() {
     setHasMoreHistory(items.length >= HISTORY_BATCH_SIZE);
   }, [historyItems.length]);
 
-  const handleLoadSession = useCallback((item, goToBlueprint = false) => {
-    setIdea(item.idea);
-    setQuestions(item.questions || []);
-    setAnswers(item.answers || {});
-    setBlueprint(item.blueprint || '');
-    setMasterPrompt(item.masterPrompt || '');
-    setHtmlMockup(item.htmlMockup || '');
-    setIdeaSpec(item.ideaSpec || null);
-    setChatHistory(item.chatHistory || []);
-    setConversation(item.chatHistory || []);
-    setCurrentDbId(item.id);
+  const handleLoadSession = useCallback(async (item, goToBlueprint = false) => {
+    let fullItem = item;
+
+    if (item.isSummary) {
+      setLoading(true);
+      setLoadingMessage('Loading project...');
+      try {
+        // ⚡ Bolt Optimization: Lazy load heavy fields (htmlMockup, ideaSpec) only when opening
+        fullItem = await getConversation(item.id);
+        if (!fullItem) {
+          throw new Error('Project not found');
+        }
+      } catch (e) {
+        console.error('Failed to load project:', e);
+        setLoading(false);
+        setLoadingMessage('');
+        alert('Failed to load project.');
+        return;
+      }
+    }
+
+    setIdea(fullItem.idea);
+    setQuestions(fullItem.questions || []);
+    setAnswers(fullItem.answers || {});
+    setBlueprint(fullItem.blueprint || '');
+    setMasterPrompt(fullItem.masterPrompt || '');
+    setHtmlMockup(fullItem.htmlMockup || '');
+    setIdeaSpec(fullItem.ideaSpec || null);
+    setChatHistory(fullItem.chatHistory || []);
+    setConversation(fullItem.chatHistory || []);
+    setCurrentDbId(fullItem.id);
     
     // Set appropriate stage
-    if (goToBlueprint && item.blueprint) {
+    if (goToBlueprint && fullItem.blueprint) {
       setStage('blueprint');
-    } else if (item.htmlMockup) {
+    } else if (fullItem.htmlMockup) {
       setStage('mockup');
-    } else if (item.blueprint) {
+    } else if (fullItem.blueprint) {
       setStage('blueprint');
-    } else if (item.questions && item.questions.length > 0) {
+    } else if (fullItem.questions && fullItem.questions.length > 0) {
       setStage('questions');
     } else {
       setStage('input');
@@ -110,6 +130,8 @@ export function useProjectState() {
     
     // Switch to input/project view
     setActiveView('input');
+    setLoading(false);
+    setLoadingMessage('');
   }, []);
 
   const handleDeleteSession = useCallback(async (id) => {
