@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { llm } from '../lib/llm';
-import { saveConversation, getRecentConversations, deleteConversation } from '../services/db';
+import { saveConversation, getRecentConversations, deleteConversation, getConversation } from '../services/db';
 import { SyncService } from '../services/SyncService';
 import { PromptService } from '../services/PromptService';
 import { createOrchestrator } from '../services/AgentOrchestrator';
@@ -83,26 +83,34 @@ export function useProjectState() {
     setHasMoreHistory(items.length >= HISTORY_BATCH_SIZE);
   }, [historyItems.length]);
 
-  const handleLoadSession = useCallback((item, goToBlueprint = false) => {
-    setIdea(item.idea);
-    setQuestions(item.questions || []);
-    setAnswers(item.answers || {});
-    setBlueprint(item.blueprint || '');
-    setMasterPrompt(item.masterPrompt || '');
-    setHtmlMockup(item.htmlMockup || '');
-    setIdeaSpec(item.ideaSpec || null);
-    setChatHistory(item.chatHistory || []);
-    setConversation(item.chatHistory || []);
-    setCurrentDbId(item.id);
+  const handleLoadSession = useCallback(async (item, goToBlueprint = false) => {
+    let sessionData = item;
+
+    // ⚡ Bolt Optimization: Lazy load full conversation if we have a summary
+    if (item.isSummary) {
+       const fullItem = await getConversation(item.id);
+       if (fullItem) sessionData = fullItem;
+    }
+
+    setIdea(sessionData.idea);
+    setQuestions(sessionData.questions || []);
+    setAnswers(sessionData.answers || {});
+    setBlueprint(sessionData.blueprint || '');
+    setMasterPrompt(sessionData.masterPrompt || '');
+    setHtmlMockup(sessionData.htmlMockup || '');
+    setIdeaSpec(sessionData.ideaSpec || null);
+    setChatHistory(sessionData.chatHistory || []);
+    setConversation(sessionData.chatHistory || []);
+    setCurrentDbId(sessionData.id);
     
     // Set appropriate stage
-    if (goToBlueprint && item.blueprint) {
+    if (goToBlueprint && sessionData.blueprint) {
       setStage('blueprint');
-    } else if (item.htmlMockup) {
+    } else if (sessionData.htmlMockup) {
       setStage('mockup');
-    } else if (item.blueprint) {
+    } else if (sessionData.blueprint) {
       setStage('blueprint');
-    } else if (item.questions && item.questions.length > 0) {
+    } else if (sessionData.questions && sessionData.questions.length > 0) {
       setStage('questions');
     } else {
       setStage('input');
