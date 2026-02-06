@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, memo } from 'react';
+import React, { useState, useEffect, useCallback, memo, useRef } from 'react';
 import { FileText, ArrowRight, ArrowLeft, SkipForward, Check } from 'lucide-react';
 import QuestionItem from './QuestionItem';
 
@@ -7,26 +7,40 @@ const QuestionsStage = memo(function QuestionsStage({ questions, answers, setAns
 
   // ⚡ Bolt Optimization: Local state for answers to prevent global re-renders on every keystroke
   const [localAnswers, setLocalAnswers] = useState(answers);
+  const localAnswersRef = useRef(localAnswers);
 
   useEffect(() => {
     setLocalAnswers(answers);
   }, [answers]);
+
+  // ⚡ Bolt Optimization: Keep ref in sync for unmount flush
+  useEffect(() => {
+    localAnswersRef.current = localAnswers;
+  }, [localAnswers]);
+
+  // ⚡ Bolt Optimization: Flush local answers to global state ONLY on unmount to prevent
+  // triggering full-app re-renders on every "Next" click.
+  useEffect(() => {
+    return () => {
+      setAnswers(localAnswersRef.current);
+    };
+  }, [setAnswers]);
 
   const handleAnswerChange = useCallback((index, value) => {
     setLocalAnswers(prev => ({ ...prev, [index]: value }));
   }, []);
 
   const handleBlur = useCallback(() => {
-      setAnswers(localAnswers);
-  }, [localAnswers, setAnswers]);
+      // ⚡ Bolt: No global update on blur to avoid re-renders.
+      // State is flushed on unmount.
+  }, []);
 
   const handleNext = () => {
-    // Checkpoint save
-    setAnswers(localAnswers);
-
     if (currentIndex < questions.length - 1) {
       setCurrentIndex(prev => prev + 1);
     } else {
+      // ⚡ Bolt: Ensure global state is synced before finishing
+      setAnswers(localAnswers);
       onNext(localAnswers);
     }
   };
@@ -40,20 +54,16 @@ const QuestionsStage = memo(function QuestionsStage({ questions, answers, setAns
       currentAnswers = newAnswers;
     }
     
-    // Checkpoint save
-    setAnswers(currentAnswers);
-
     if (currentIndex < questions.length - 1) {
       setCurrentIndex(prev => prev + 1);
     } else {
+      // ⚡ Bolt: Ensure global state is synced before finishing
+      setAnswers(currentAnswers);
       onNext(currentAnswers);
     }
   };
 
   const handleBack = () => {
-    // Checkpoint save
-    setAnswers(localAnswers);
-
     if (currentIndex > 0) {
       setCurrentIndex(prev => prev - 1);
     } else {
