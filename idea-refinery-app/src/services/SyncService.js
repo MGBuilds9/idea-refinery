@@ -17,7 +17,9 @@ export const SyncService = {
       const item = {
         id: data.id ? data.id.toString() : crypto.randomUUID(), // Ensure string ID for server
         type: 'conversation',
-        content: JSON.stringify(data), // Server stores content as text/json
+        // ⚡ Bolt Optimization: Send object directly to prevent double-serialization.
+        // Server will store as JSONB, enabling indexing and reducing payload size.
+        content: data,
         version: 1, // Simple versioning for now
         deleted: false
       };
