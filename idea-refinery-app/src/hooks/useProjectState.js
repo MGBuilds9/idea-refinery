@@ -84,45 +84,33 @@ export function useProjectState() {
   }, [historyItems.length]);
 
   const handleLoadSession = useCallback(async (item, goToBlueprint = false) => {
-    let fullItem = item;
+    let sessionData = item;
 
+    // ⚡ Bolt Optimization: Lazy load full conversation if we have a summary
     if (item.isSummary) {
-      setLoading(true);
-      setLoadingMessage('Loading project...');
-      try {
-        // ⚡ Bolt Optimization: Lazy load heavy fields (htmlMockup, ideaSpec) only when opening
-        fullItem = await getConversation(item.id);
-        if (!fullItem) {
-          throw new Error('Project not found');
-        }
-      } catch (e) {
-        console.error('Failed to load project:', e);
-        setLoading(false);
-        setLoadingMessage('');
-        alert('Failed to load project.');
-        return;
-      }
+       const fullItem = await getConversation(item.id);
+       if (fullItem) sessionData = fullItem;
     }
 
-    setIdea(fullItem.idea);
-    setQuestions(fullItem.questions || []);
-    setAnswers(fullItem.answers || {});
-    setBlueprint(fullItem.blueprint || '');
-    setMasterPrompt(fullItem.masterPrompt || '');
-    setHtmlMockup(fullItem.htmlMockup || '');
-    setIdeaSpec(fullItem.ideaSpec || null);
-    setChatHistory(fullItem.chatHistory || []);
-    setConversation(fullItem.chatHistory || []);
-    setCurrentDbId(fullItem.id);
+    setIdea(sessionData.idea);
+    setQuestions(sessionData.questions || []);
+    setAnswers(sessionData.answers || {});
+    setBlueprint(sessionData.blueprint || '');
+    setMasterPrompt(sessionData.masterPrompt || '');
+    setHtmlMockup(sessionData.htmlMockup || '');
+    setIdeaSpec(sessionData.ideaSpec || null);
+    setChatHistory(sessionData.chatHistory || []);
+    setConversation(sessionData.chatHistory || []);
+    setCurrentDbId(sessionData.id);
     
     // Set appropriate stage
-    if (goToBlueprint && fullItem.blueprint) {
+    if (goToBlueprint && sessionData.blueprint) {
       setStage('blueprint');
-    } else if (fullItem.htmlMockup) {
+    } else if (sessionData.htmlMockup) {
       setStage('mockup');
-    } else if (fullItem.blueprint) {
+    } else if (sessionData.blueprint) {
       setStage('blueprint');
-    } else if (fullItem.questions && fullItem.questions.length > 0) {
+    } else if (sessionData.questions && sessionData.questions.length > 0) {
       setStage('questions');
     } else {
       setStage('input');

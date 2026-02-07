@@ -30,7 +30,16 @@ const HistoryView = ({ historyItems, onLoad, onDelete, onLoadMore, hasMore }) =>
 
   const handleEmail = useCallback(async (e, item) => {
     e.stopPropagation();
-    const { type } = getArtifactContent(item);
+
+    // ⚡ Bolt Optimization: Ensure we have the full item content (blueprint/questions)
+    // since the history list now only loads summaries.
+    let fullItem = item;
+    if (item.isSummary) {
+        const loaded = await getConversation(item.id);
+        if (loaded) fullItem = loaded;
+    }
+
+    const { type, content } = getArtifactContent(fullItem);
     
     if (!confirm(`Email this ${type.toLowerCase()} to yourself?`)) return;
     

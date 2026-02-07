@@ -44,6 +44,15 @@ export const saveConversation = async (data) => {
 };
 
 /**
+ * Get a single conversation by ID
+ * @param {number} id
+ * @returns {Promise<Object>}
+ */
+export const getConversation = async (id) => {
+  return await db.conversations.get(id);
+};
+
+/**
  * Get all conversations ordered by timestamp desc
  * @param {number} limit - Max items to return (default 50)
  * @param {number} offset - Number of items to skip (default 0)
@@ -66,18 +75,21 @@ export const getRecentConversations = async (limit = 50, offset = 0) => {
     .limit(limit)
     .toArray();
 
-  // ⚡ Bolt Optimization: Return lightweight summaries to reduce memory usage
-  return items.map(item => ({
-    ...item,
-    htmlMockup: undefined,
-    ideaSpec: undefined,
-    chatHistory: undefined,
-    masterPrompt: undefined,
-    answers: undefined,
-    // Keep truncated blueprint for UI snippet
-    blueprint: item.blueprint ? item.blueprint.substring(0, 300) : '',
-    isSummary: true
-  }));
+  // ⚡ Bolt Optimization: Return lightweight summaries to reduce memory usage and React render overhead.
+  // Large fields like htmlMockup (can be 2MB+) are excluded until explicitly loaded.
+  return items.map(item => {
+    return {
+      id: item.id,
+      idea: item.idea,
+      timestamp: item.timestamp,
+      updatedAt: item.lastUpdated || item.timestamp,
+      // Truncate blueprint for preview
+      blueprint: item.blueprint ? (item.blueprint.length > 200 ? item.blueprint.substring(0, 200) : item.blueprint) : null,
+      questions: item.questions, // Keep for list type detection
+      // Exclude heavy fields
+      isSummary: true
+    };
+  });
 };
 
 /**
