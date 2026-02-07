@@ -1,4 +1,4 @@
-import React, { useState, useEffect, memo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Send, Sparkles } from 'lucide-react';
 import PromptSelector from './PromptSelector';
 
@@ -121,6 +121,4 @@ export default function InputStage({ idea, setIdea, onNext, selectedPersona, set
       </div>
     </div>
   );
-});
-
-export default InputStage;
+}
