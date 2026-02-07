@@ -39,7 +39,7 @@ const HistoryView = ({ historyItems, onLoad, onDelete, onLoadMore, hasMore }) =>
         if (loaded) fullItem = loaded;
     }
 
-    const { type, content } = getArtifactContent(fullItem);
+    const { type } = getArtifactContent(fullItem);
     
     if (!confirm(`Email this ${type.toLowerCase()} to yourself?`)) return;
     
