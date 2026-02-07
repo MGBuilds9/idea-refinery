@@ -48,3 +48,9 @@
 **Vulnerability:** The Gemini API proxy passed the API key in the URL query string (`?key=...`). This exposes the key in proxy logs, browser history (if client-side), and server access logs.
 **Learning:** Even server-to-server calls can leak secrets if they are put in URLs. APIs often support header-based auth (`Authorization` or custom headers like `x-goog-api-key`) which is much safer as headers are typically encrypted in transit and not logged by default.
 **Prevention:** Always prefer HTTP headers over URL parameters for sensitive data (API keys, tokens, PII). Check API documentation for header-based authentication options.
+
+## 2026-02-04 - Header Conflict in Proxy Auth
+
+**Vulnerability:** The OpenAI proxy endpoint used the `Authorization` header for the API key, but the global authentication middleware also used `Authorization` for the JWT. This collision made the endpoint unusable for authenticated users (DoS) or required disabling auth (Security Risk).
+**Learning:** When building proxies, avoid reusing standard headers like `Authorization` for upstream credentials if your own app uses them.
+**Prevention:** Use custom headers (e.g., `x-api-key`) for upstream API keys to ensure they don't conflict with session authentication headers.
