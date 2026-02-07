@@ -58,15 +58,6 @@ export const getConversation = async (id) => {
  * @param {number} offset - Number of items to skip (default 0)
  * @returns {Promise<Array>}
  */
-/**
- * Get a single conversation by ID
- * @param {number} id
- * @returns {Promise<Object>}
- */
-export const getConversation = async (id) => {
-  return await db.conversations.get(id);
-};
-
 export const getRecentConversations = async (limit = 50, offset = 0) => {
   const items = await db.conversations
     .orderBy('lastUpdated')
