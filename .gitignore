@@ -2,6 +2,20 @@
 node_modules
 .env
 
+# JavaScript / build artifacts (monorepo-safe)
+**/node_modules/
+**/dist/
+**/coverage/
+**/.vite/
+**/playwright-report/
+**/test-results/
+
+# iOS/Capacitor local artifacts
+**/ios/App/Pods/
+**/ios/App/build/
+**/ios/App/DerivedData/
+**/ios/App/App.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/configuration/
+
 # Codex repo-hygiene: ignore local env files (keep templates tracked)
 **/.env
 **/.env.*
