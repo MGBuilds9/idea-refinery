@@ -1,5 +1,56 @@
+/**
+ * LLMService - Client-side AI provider abstraction
+ *
+ * PRIMARY PATH: When authenticated, AI calls go through /api/refine (or /api/refine/stream)
+ * via the server's AgentOrchestrator. This file handles direct provider calls
+ * as a FALLBACK for local-only mode (no server connection).
+ */
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { SecureStorage } from '../services/secure_storage';
+
+/**
+ * Classify AI/LLM errors into user-friendly categories with suggestions.
+ * @param {Error|string} error - The error object or message
+ * @param {number} [statusCode] - HTTP status code if available
+ * @returns {{ type: string, message: string, suggestion: string }}
+ */
+export function classifyAIError(error, statusCode) {
+  if (!error) return { type: 'unknown', message: 'An unknown error occurred', suggestion: 'Please try again.' };
+
+  const message = error.message || error.toString();
+
+  // Auth errors
+  if (statusCode === 401 || statusCode === 403 || /invalid.*key|unauthorized|authentication/i.test(message)) {
+    return { type: 'auth_error', message: 'Invalid API key', suggestion: 'Check your API key in Settings > API Keys.' };
+  }
+
+  // Rate limiting
+  if (statusCode === 429 || /rate.?limit|too many requests/i.test(message)) {
+    return { type: 'rate_limit', message: 'Rate limit exceeded', suggestion: 'Wait a moment and try again, or switch to a different provider.' };
+  }
+
+  // Quota/billing
+  if (/quota|billing|insufficient.*funds|exceeded/i.test(message)) {
+    return { type: 'quota_exceeded', message: 'API quota exceeded', suggestion: 'Check your billing at the provider\'s dashboard.' };
+  }
+
+  // Network
+  if (/network|fetch|ECONNREFUSED|timeout|ENOTFOUND/i.test(message)) {
+    return { type: 'network_error', message: 'Network connection failed', suggestion: 'Check your internet connection and try again.' };
+  }
+
+  // Model errors
+  if (/model.*not.*found|invalid.*model/i.test(message)) {
+    return { type: 'model_error', message: 'Model not available', suggestion: 'Try a different model in Settings > AI Configuration.' };
+  }
+
+  // Parse errors
+  if (/json|parse|unexpected token/i.test(message)) {
+    return { type: 'parse_error', message: 'Failed to parse AI response', suggestion: 'The AI returned invalid data. Try rephrasing or using a different model.' };
+  }
+
+  return { type: 'unknown', message: message.substring(0, 200), suggestion: 'Please try again. If this persists, try a different provider.' };
+}
 
 /**
  * @typedef {'anthropic' | 'openai' | 'gemini'} Provider
@@ -11,9 +62,9 @@ const PROXY_URL = 'http://localhost:3001/api';
 // Available models per provider
 export const AVAILABLE_MODELS = {
   anthropic: [
-    { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet' },
-    { id: 'claude-3-5-haiku-20241022', name: 'Claude 3.5 Haiku' },
-    { id: 'claude-3-opus-20240229', name: 'Claude 3 Opus' }
+    { id: 'claude-sonnet-4-5-20250929', name: 'Claude Sonnet 4.5' },
+    { id: 'claude-haiku-4-5-20251001', name: 'Claude Haiku 4.5' },
+    { id: 'claude-opus-4-6', name: 'Claude Opus 4.6' }
   ],
   openai: [
     { id: 'gpt-4o', name: 'GPT-4o' },
@@ -197,40 +248,60 @@ class LLMService {
   }
 
   // Context Optimization: Sliding Window + Summary
-  // Keeps system prompt, recent N messages, and summarizes older ones (mock summary for now)
+  // Keeps system messages, compresses old messages into a summary, keeps recent window
   optimizeContext(messages, maxCount = 8) {
-     if (!messages || messages.length <= maxCount) return messages;
-     
-     // Always keep system prompt if present (usually passed separately, but if in array...)
-     // Our usage passes system prompt separately, so 'messages' here are user/assistant turns.
-     
-     const optimized = [];
-     
-     // 1. Keep the first user message (Context/Idea)
-     if (messages.length > 0) optimized.push(messages[0]);
-     
-     // 2. Insert a "summary" placeholder for skipped messages
-     // In a real implementation, we would call a cheap model to summarize messages[1] to messages[length-N]
-     const skippedCount = messages.length - maxCount;
-     if (skippedCount > 0) {
-         optimized.push({
-             role: 'system_note', // Internal marker, handled by provider adapters
-             content: `[Context Summary: ${skippedCount} previous messages compressed]`
-         });
-     }
-     
-     // 3. Keep last N-1 messages
-     const tail = messages.slice(- (maxCount - 1));
-     tail.forEach(m => optimized.push(m));
-     
-     return optimized;
+    if (!messages || messages.length <= maxCount) return messages;
+
+    // Always keep the system message(s) if present
+    const systemMessages = messages.filter(m => m.role === 'system');
+    const nonSystemMessages = messages.filter(m => m.role !== 'system');
+
+    if (nonSystemMessages.length <= maxCount) return messages;
+
+    // Keep the most recent messages (sliding window)
+    const recentMessages = nonSystemMessages.slice(-maxCount);
+
+    // Create a brief summary of skipped messages
+    const skippedCount = nonSystemMessages.length - maxCount;
+    const skippedMessages = nonSystemMessages.slice(0, skippedCount);
+
+    // Build a concise summary from skipped content
+    const summaryPoints = skippedMessages
+      .filter(m => m.role === 'user' || m.role === 'assistant')
+      .map(m => {
+        const content = typeof m.content === 'string' ? m.content : JSON.stringify(m.content);
+        // Take first 100 chars of each message
+        return `[${m.role}]: ${content.substring(0, 100)}${content.length > 100 ? '...' : ''}`;
+      })
+      .slice(0, 5); // Max 5 summary points
+
+    const contextNote = {
+      role: 'system',
+      content: `[Context Summary - ${skippedCount} earlier messages compressed]\n${summaryPoints.join('\n')}\n[End of summary - recent conversation follows]`
+    };
+
+    return [...systemMessages, contextNote, ...recentMessages];
+  }
+
+  // Approximate token count (4 chars ~ 1 token)
+  estimateTokens(text) {
+    if (!text) return 0;
+    const str = typeof text === 'string' ? text : JSON.stringify(text);
+    return Math.ceil(str.length / 4);
   }
 
   async generate(provider, { system, prompt, maxTokens = 4000, model, history = [] }) {
     if (!this.apiKeys[provider]) {
-      throw new Error(`Please provide an API key for ${provider}`);
+      const classified = {
+        type: 'auth_error',
+        message: `No API key configured for ${provider}`,
+        suggestion: `Add your ${provider} API key in Settings > API Keys.`
+      };
+      const err = new Error(classified.message);
+      err.classified = classified;
+      throw err;
     }
-    
+
     // Optimize history if provided
     const optimizedHistory = this.optimizeContext(history);
 
@@ -241,8 +312,16 @@ class LLMService {
         return this.callOpenAI({ system, prompt, maxTokens, model, history: optimizedHistory });
       case 'gemini':
         return this.callGemini({ system, prompt, maxTokens, model, history: optimizedHistory });
-      default:
-        throw new Error(`Unknown provider: ${provider}`);
+      default: {
+        const classified = {
+          type: 'unknown',
+          message: `Unknown provider: ${provider}`,
+          suggestion: 'Select a supported provider (Anthropic, OpenAI, or Gemini).'
+        };
+        const err = new Error(classified.message);
+        err.classified = classified;
+        throw err;
+      }
     }
   }
 
@@ -302,23 +381,36 @@ class LLMService {
      // Prepare messages
     const messages = this.buildMessages(history, prompt);
 
-    const response = await fetch(`${PROXY_URL}/anthropic`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": this.apiKeys.anthropic
-      },
-      body: JSON.stringify({
-        model: model || "claude-3-5-sonnet-20241022",
-        max_tokens: maxTokens,
-        system: system,
-        messages: messages
-      })
-    });
+    let response;
+    try {
+      response = await fetch(`${PROXY_URL}/anthropic`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": this.apiKeys.anthropic
+        },
+        body: JSON.stringify({
+          model: model || "claude-sonnet-4-5-20250929",
+          max_tokens: maxTokens,
+          system: system,
+          messages: messages
+        })
+      });
+    } catch (fetchError) {
+      const classified = classifyAIError(fetchError);
+      const err = new Error(classified.message);
+      err.classified = classified;
+      throw err;
+    }
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error?.message || `Anthropic API Error: ${response.status}`);
+      let errorBody;
+      try { errorBody = await response.json(); } catch { errorBody = {}; }
+      const rawMessage = errorBody.error?.message || `Anthropic API Error: ${response.status}`;
+      const classified = classifyAIError({ message: rawMessage }, response.status);
+      const err = new Error(classified.message);
+      err.classified = classified;
+      throw err;
     }
 
     const data = await response.json();
@@ -328,28 +420,41 @@ class LLMService {
   // OpenAI Implementation - via proxy to avoid CORS
   async callOpenAI({ system, prompt, maxTokens, model, history }) {
     const messages = this.buildMessages(history, prompt);
-    
+
     // Add system prompt to start
     if (system) {
         messages.unshift({ role: "system", content: system || "You are a helpful assistant." });
     }
 
-    const response = await fetch(`${PROXY_URL}/openai`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${this.apiKeys.openai}`
-      },
-      body: JSON.stringify({
-        model: model || "gpt-4o",
-        max_tokens: maxTokens,
-        messages: messages
-      })
-    });
+    let response;
+    try {
+      response = await fetch(`${PROXY_URL}/openai`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${this.apiKeys.openai}`
+        },
+        body: JSON.stringify({
+          model: model || "gpt-4o",
+          max_tokens: maxTokens,
+          messages: messages
+        })
+      });
+    } catch (fetchError) {
+      const classified = classifyAIError(fetchError);
+      const err = new Error(classified.message);
+      err.classified = classified;
+      throw err;
+    }
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error?.message || `OpenAI API Error: ${response.status}`);
+      let errorBody;
+      try { errorBody = await response.json(); } catch { errorBody = {}; }
+      const rawMessage = errorBody.error?.message || `OpenAI API Error: ${response.status}`;
+      const classified = classifyAIError({ message: rawMessage }, response.status);
+      const err = new Error(classified.message);
+      err.classified = classified;
+      throw err;
     }
 
     const data = await response.json();
@@ -359,7 +464,7 @@ class LLMService {
   // Gemini Implementation - via proxy to avoid CORS
   async callGemini({ system, prompt, maxTokens, model, history }) {
     const msgs = this.buildMessages(history, prompt);
-    
+
     // Convert to Gemini format
     const contents = msgs.map(m => {
         let role = 'user';
@@ -383,24 +488,40 @@ class LLMService {
       };
     }
 
-    const response = await fetch(`${PROXY_URL}/gemini`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(body)
-    });
+    let response;
+    try {
+      response = await fetch(`${PROXY_URL}/gemini`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(body)
+      });
+    } catch (fetchError) {
+      const classified = classifyAIError(fetchError);
+      const err = new Error(classified.message);
+      err.classified = classified;
+      throw err;
+    }
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error?.message || `Gemini API Error: ${response.status}`);
+      let errorBody;
+      try { errorBody = await response.json(); } catch { errorBody = {}; }
+      const rawMessage = errorBody.error?.message || `Gemini API Error: ${response.status}`;
+      const classified = classifyAIError({ message: rawMessage }, response.status);
+      const err = new Error(classified.message);
+      err.classified = classified;
+      throw err;
     }
 
     const data = await response.json();
     if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
-      throw new Error('Invalid Gemini response');
+      const classified = classifyAIError({ message: 'Invalid Gemini response - no candidates returned' });
+      const err = new Error(classified.message);
+      err.classified = classified;
+      throw err;
     }
-    
+
     return data.candidates[0].content.parts[0].text;
   }
 }

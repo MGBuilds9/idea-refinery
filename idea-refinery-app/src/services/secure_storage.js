@@ -110,6 +110,15 @@ export const SecureStorage = {
   },
 
   /**
+   * Check if secure storage is available (PIN is set and ready for encryption).
+   * Use this before attempting to save sensitive data like API keys.
+   * @returns {Promise<boolean>}
+   */
+  async isSecureStorageAvailable() {
+    return this.isPinSet();
+  },
+
+  /**
    * Remove an item
    */
   removeItem(key) {

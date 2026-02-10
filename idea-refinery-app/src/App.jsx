@@ -1,5 +1,6 @@
 import React, { useState, useEffect, Suspense, useCallback } from 'react';
-import { Sparkles, Zap } from 'lucide-react';
+import { Sparkles, Zap, X } from 'lucide-react';
+import { Toaster, toast } from 'sonner';
 import Sidebar from './components/Sidebar';
 import BottomNav from './components/BottomNav';
 import InputStage from './components/InputStage';
@@ -38,7 +39,8 @@ function App() {
 
   const {
     loadHistory, handleLoadMore, handleLoadSession, handleDeleteSession, handleGenerateQuestions,
-    handleGenerateBlueprint, handleRefineBlueprint, handleGenerateMockup, handleViewChange
+    handleGenerateBlueprint, handleRefineBlueprint, handleGenerateMockup, handleViewChange,
+    handleCancelStream
   } = projectActions;
 
   // Security & Onboarding State
@@ -105,7 +107,7 @@ function App() {
     // Actually SecureStorage.verifyPin handles the legacy hash check too.
     
     if (!isValid) {
-      alert('Incorrect PIN');
+      toast.error('Incorrect PIN');
       return;
     }
 
@@ -161,9 +163,50 @@ function App() {
 
   const handleStartOver = useCallback(() => setStage('input'), [setStage]);
 
+  // Skip banner state
+  const [showSkipBanner, setShowSkipBanner] = useState(
+    localStorage.getItem('onboarding_skipped') === 'true' && !localStorage.getItem('llm_api_key')
+  );
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Cmd/Ctrl + N: New project
+      if ((e.metaKey || e.ctrlKey) && e.key === 'n') {
+        e.preventDefault();
+        handleStartOver();
+      }
+      // Cmd/Ctrl + E: Export (when on blueprint/mockup stage)
+      if ((e.metaKey || e.ctrlKey) && e.key === 'e') {
+        if (stage === 'blueprint' || stage === 'mockup') {
+          e.preventDefault();
+          projectActions.setIsExportModalOpen(true);
+        }
+      }
+      // Escape: Close modals
+      if (e.key === 'Escape') {
+        projectActions.setIsExportModalOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [stage, handleStartOver, projectActions]);
+
   return (
     <ThemeProvider>
       <>
+        <Toaster
+          position="bottom-right"
+          toastOptions={{
+            style: {
+              background: '#131316',
+              border: '1px solid rgba(255,255,255,0.1)',
+              color: '#fafafa',
+            },
+          }}
+          theme="dark"
+        />
         {initializing && (
           <div className="min-h-screen bg-[var(--color-background)] flex items-center justify-center">
             <div className="text-center">
@@ -229,6 +272,21 @@ function App() {
 
                 {/* Main Content */}
                 <main className="flex-1 md:ml-64 ml-0 p-4 pt-[max(1.5rem,env(safe-area-inset-top))] md:p-8 lg:p-12 overflow-y-auto relative pb-24 md:pb-12">
+
+                  {/* Skip Setup Banner */}
+                  {showSkipBanner && (
+                    <div className="mb-4 bg-[#d4af37]/10 border border-[#d4af37]/30 rounded-lg px-4 py-3 flex items-center justify-between animate-fade-in">
+                      <p className="text-sm text-[#d4af37]">
+                        Set up your API key in Settings to start refining ideas.
+                      </p>
+                      <button
+                        onClick={() => setShowSkipBanner(false)}
+                        className="text-[#d4af37]/60 hover:text-[#d4af37] transition-colors ml-4 shrink-0"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
 
                   {/* Header (Context sensitive) - Hidden on mobile when not needed */}
                   <div className="mb-2 md:mb-12 flex justify-between items-center">
@@ -311,6 +369,16 @@ function App() {
                               <span className="text-sm font-mono">Second AI is reviewing...</span>
                             </div>
                           )}
+                          <button
+                            onClick={() => {
+                              handleCancelStream();
+                              setStage('input');
+                              toast.info('Generation cancelled');
+                            }}
+                            className="mt-6 px-6 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg text-sm font-mono transition-colors border border-white/10"
+                          >
+                            CANCEL
+                          </button>
                         </div>
                       )}
 

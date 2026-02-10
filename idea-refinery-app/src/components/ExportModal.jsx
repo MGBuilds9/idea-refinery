@@ -3,27 +3,27 @@ import { Download, FileText, Code, ListChecks, Check, X, Shield, Sparkles } from
 
 const ExportOption = ({ id, icon: Icon, title, description, isSelected, onClick }) => {
   // eslint-disable-next-line no-unused-vars
-  const _ = Icon; // Explicitly use it to satisfy persistent linting issues
+  const _ = Icon;
   return (
     <button
       onClick={() => onClick(id)}
       className={`
         w-full flex items-center gap-4 p-4 rounded-xl border transition-all duration-200 text-left
-        ${isSelected 
-          ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)] shadow-[var(--color-primary)]/10' 
+        ${isSelected
+          ? 'bg-[#d4af37]/10 border-[#d4af37] shadow-[#d4af37]/10'
           : 'bg-white/5 border-white/10 hover:border-white/20 opacity-60'}
       `}
     >
-      <div className={`p-3 rounded-lg ${isSelected ? 'bg-[var(--color-primary)] text-black' : 'bg-white/10 text-white'}`}>
+      <div className={`p-3 rounded-lg ${isSelected ? 'bg-[#d4af37] text-black' : 'bg-white/10 text-white'}`}>
         <Icon className="w-5 h-5" />
       </div>
       <div className="flex-1">
         <h4 className="font-bold text-sm text-white">{title}</h4>
-        <p className="text-xs text-white/50">{description}</p>
+        <p className="text-xs text-zinc-500">{description}</p>
       </div>
       <div className={`
         w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors
-        ${isSelected ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-black' : 'border-white/20'}
+        ${isSelected ? 'bg-[#d4af37] border-[#d4af37] text-black' : 'border-white/20'}
       `}>
         {isSelected && <Check className="w-4 h-4" />}
       </div>
@@ -61,19 +61,19 @@ const ExportModal = ({ isOpen, onClose, onExport }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-      <div className="bg-[#121212] border border-white/10 rounded-2xl w-full max-w-xl shadow-2xl overflow-hidden">
+      <div className="bg-[#131316] border border-white/10 rounded-2xl w-full max-w-xl shadow-2xl overflow-hidden">
         {/* Header */}
-        <div className="px-8 py-6 border-b border-white/5 bg-gradient-to-r from-[var(--color-primary)]/10 to-transparent flex items-center justify-between">
+        <div className="px-8 py-6 border-b border-white/5 bg-gradient-to-r from-[#d4af37]/10 to-transparent flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-[var(--color-primary)] rounded-lg text-black">
+            <div className="p-2 bg-[#d4af37] rounded-lg text-black">
               <Download className="w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-xl font-[var(--font-heading)] font-bold text-white uppercase tracking-tight">Export Flight Deck</h2>
-              <p className="text-xs text-[var(--color-primary)] font-mono">READY FOR TAKEOFF</p>
+              <h2 className="text-xl font-sans font-bold text-white uppercase tracking-tight">Export Flight Deck</h2>
+              <p className="text-xs text-[#d4af37] font-mono">READY FOR TAKEOFF</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-white/40 hover:text-white transition-colors">
+          <button onClick={onClose} className="text-zinc-500 hover:text-white transition-colors">
             <X className="w-6 h-6" />
           </button>
         </div>
@@ -81,7 +81,7 @@ const ExportModal = ({ isOpen, onClose, onExport }) => {
         {/* Body */}
         <div className="p-8 space-y-4">
           <div className="grid grid-cols-1 gap-3">
-            <ExportOption 
+            <ExportOption
               id="blueprint"
               icon={FileText}
               title="Project Blueprint"
@@ -89,7 +89,7 @@ const ExportModal = ({ isOpen, onClose, onExport }) => {
               isSelected={options.blueprint}
               onClick={toggleOption}
             />
-            <ExportOption 
+            <ExportOption
               id="cursorRules"
               icon={Code}
               title="Cursor Rules"
@@ -97,7 +97,7 @@ const ExportModal = ({ isOpen, onClose, onExport }) => {
               isSelected={options.cursorRules}
               onClick={toggleOption}
             />
-            <ExportOption 
+            <ExportOption
               id="implementationPlan"
               icon={ListChecks}
               title="Implementation Plan"
@@ -105,7 +105,7 @@ const ExportModal = ({ isOpen, onClose, onExport }) => {
               isSelected={options.implementationPlan}
               onClick={toggleOption}
             />
-            <ExportOption 
+            <ExportOption
               id="mockupHtml"
               icon={Sparkles}
               title="Perspective Mockup"
@@ -116,10 +116,10 @@ const ExportModal = ({ isOpen, onClose, onExport }) => {
           </div>
 
           <div className="pt-6">
-            <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl flex gap-3 mb-6">
-              <Shield className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-              <p className="text-xs text-amber-200/80 leading-relaxed font-[var(--font-body)]">
-                <b>Pro Tip:</b> Use the .cursorrules file in Cursor or Windsurf to ground the AI in your project stack from the first instruction.
+            <div className="p-4 bg-[#d4af37]/5 border border-[#d4af37]/20 rounded-xl flex gap-3 mb-6">
+              <Shield className="w-5 h-5 text-[#d4af37] shrink-0 mt-0.5" />
+              <p className="text-xs text-zinc-400 leading-relaxed font-sans">
+                <b className="text-[#d4af37]">Pro Tip:</b> Use the .cursorrules file in Cursor or Windsurf to ground the AI in your project stack from the first instruction.
               </p>
             </div>
 
@@ -128,7 +128,7 @@ const ExportModal = ({ isOpen, onClose, onExport }) => {
               disabled={exporting || !Object.values(options).some(v => v)}
               className={`
                 w-full py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all
-                ${exporting ? 'bg-white/10 text-white/40 cursor-wait' : 'bg-[var(--color-primary)] hover:bg-[#C5A028] text-black shadow-lg shadow-[var(--color-primary)]/20'}
+                ${exporting ? 'bg-white/10 text-zinc-500 cursor-wait' : 'bg-[#d4af37] hover:bg-[#c5a028] text-black shadow-lg shadow-[#d4af37]/20'}
               `}
             >
               {exporting ? (

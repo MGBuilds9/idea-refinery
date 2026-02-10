@@ -4,24 +4,20 @@ import PromptSelector from './PromptSelector';
 
 export default function InputStage({ idea, setIdea, onNext, selectedPersona, setSelectedPersona, loading }) {
   const [isFocused, setIsFocused] = useState(false);
-  // ⚡ Bolt Optimization: Use local state for high-frequency input to prevent global re-renders
   const [localIdea, setLocalIdea] = useState(idea);
 
-  // Sync local state when prop changes (e.g. history load)
   useEffect(() => {
     setLocalIdea(idea);
   }, [idea]);
 
   const handleSubmit = async () => {
     if (!localIdea.trim()) return;
-    // Update global state and pass override to onNext immediately
     setIdea(localIdea);
     onNext(localIdea);
   };
 
   const handleBlur = () => {
     setIsFocused(false);
-    // Sync to global state on blur
     setIdea(localIdea);
   };
 
@@ -36,10 +32,10 @@ export default function InputStage({ idea, setIdea, onNext, selectedPersona, set
     <div className="flex flex-col items-center w-full max-w-4xl mx-auto pt-0 md:pt-4 min-h-[calc(100vh-100px)]">
       {/* Hero Section */}
       <div className="w-full text-center mb-8 md:mb-12 px-4">
-        <h1 className="text-4xl md:text-5xl lg:text-6xl font-[var(--font-heading)] font-bold text-[var(--color-text)] mb-4">
+        <h1 className="text-4xl md:text-5xl lg:text-6xl font-sans font-bold text-white mb-4">
           Transform Your Ideas
         </h1>
-        <p className="text-lg md:text-xl text-[var(--color-text-muted)] font-[var(--font-body)] max-w-2xl mx-auto">
+        <p className="text-lg md:text-xl text-zinc-400 font-sans max-w-2xl mx-auto">
           Describe your concept and watch it become a comprehensive blueprint
         </p>
       </div>
@@ -59,7 +55,7 @@ export default function InputStage({ idea, setIdea, onNext, selectedPersona, set
         >
           <div className="relative group">
             {/* Card Container */}
-            <div className="relative bg-[var(--color-surface)] rounded-2xl p-6 md:p-8 border border-[var(--color-border)] shadow-[var(--shadow-md)] transition-all duration-200 hover:shadow-[var(--shadow-lg)]">
+            <div className="relative glass-panel rounded-2xl p-6 md:p-8 transition-all duration-200 hover:shadow-lg">
               <textarea
                 value={localIdea}
                 onChange={(e) => setLocalIdea(e.target.value)}
@@ -68,17 +64,17 @@ export default function InputStage({ idea, setIdea, onNext, selectedPersona, set
                 onBlur={handleBlur}
                 placeholder="What are you building today?"
                 aria-label="Idea description"
-                className="w-full bg-transparent border-none focus:ring-0 text-xl md:text-2xl font-[var(--font-body)] text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] resize-none min-h-[120px] md:min-h-[160px] leading-relaxed selection:bg-[var(--color-primary)]/20 selection:text-[var(--color-text)] outline-none"
+                className="w-full bg-transparent border-none focus:ring-0 text-xl md:text-2xl font-sans text-white placeholder:text-zinc-600 resize-none min-h-[120px] md:min-h-[160px] leading-relaxed selection:bg-[#d4af37]/20 selection:text-white outline-none"
                 style={{ minHeight: '160px' }}
               />
 
-              <div className="flex justify-between items-center mt-4 md:mt-6 pt-4 md:pt-6 border-t border-[var(--color-border)]">
+              <div className="flex justify-between items-center mt-4 md:mt-6 pt-4 md:pt-6 border-t border-white/10">
                 <div className="flex flex-col gap-1">
-                  <span className={`text-xs font-[var(--font-body)] font-semibold uppercase tracking-wide transition-colors duration-200 ${isFocused ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}`}>
+                  <span className={`text-xs font-sans font-semibold uppercase tracking-wide transition-colors duration-200 ${isFocused ? 'text-[#d4af37]' : 'text-zinc-500'}`}>
                     {isFocused ? 'Ready to Refine' : 'Start Typing'}
                   </span>
                   {/* Keyboard shortcut hint */}
-                  <span className="text-[10px] text-[var(--color-text-muted)] font-[var(--font-body)] hidden md:block">
+                  <span className="text-[10px] text-zinc-600 font-sans hidden md:block">
                     Press Cmd+Enter to submit
                   </span>
                 </div>
@@ -110,8 +106,8 @@ export default function InputStage({ idea, setIdea, onNext, selectedPersona, set
           {!isFocused && (
             <div className="mt-8 md:mt-12 flex justify-center gap-8 animate-fade-in">
               <div className="flex flex-col items-center gap-2 group cursor-default">
-                <Sparkles size={20} className="text-[var(--color-primary)] transition-colors group-hover:text-[var(--color-secondary)]" />
-                <span className="text-xs font-[var(--font-body)] font-medium text-[var(--color-text-muted)] group-hover:text-[var(--color-text)] transition-colors">
+                <Sparkles size={20} className="text-[#d4af37] transition-colors group-hover:text-[#c5a028]" />
+                <span className="text-xs font-sans font-medium text-zinc-500 group-hover:text-zinc-300 transition-colors">
                   AI Enhanced
                 </span>
               </div>

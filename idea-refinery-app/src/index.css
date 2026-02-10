@@ -1,31 +1,31 @@
 /* Import Google Fonts */
-@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 @import "tailwindcss";
 
 @theme {
   /* Typography */
-  --font-heading: "Fredoka", sans-serif;
-  --font-body: "Nunito", sans-serif;
-  --font-mono: "IBM Plex Mono", monospace;
-  
-  /* Light Mode Colors (Primary) */
-  --color-primary: #3B82F6;
-  --color-secondary: #60A5FA;
-  --color-cta: #F97316;
-  --color-background: #F8FAFC;
-  --color-surface: #FFFFFF;
-  --color-text: #1E293B;
-  --color-text-muted: #64748B;
-  --color-border: #E2E8F0;
-  
-  /* Dark Mode Colors (Secondary) */
-  --color-dark-background: #0F172A;
-  --color-dark-surface: #1E293B;
-  --color-dark-text: #F1F5F9;
-  --color-dark-text-muted: #94A3B8;
-  --color-dark-border: #334155;
-  
+  --font-heading: "Inter", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  /* Refinery Dark Colors */
+  --color-primary: #d4af37;
+  --color-primary-foreground: #000000;
+  --color-secondary: #c5a028;
+  --color-cta: #d4af37;
+  --color-background: #09090b;
+  --color-surface: rgba(255,255,255,0.05);
+  --color-surface-solid: #131316;
+  --color-text: #fafafa;
+  --color-text-muted: #a1a1aa;
+  --color-border: rgba(255,255,255,0.1);
+  --color-border-solid: #27272a;
+  --color-danger: #ef4444;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-info: #3b82f6;
+
   /* Spacing Scale */
   --space-xs: 0.25rem;   /* 4px */
   --space-sm: 0.5rem;    /* 8px */
@@ -34,24 +34,43 @@
   --space-xl: 2rem;      /* 32px */
   --space-2xl: 3rem;     /* 48px */
   --space-3xl: 4rem;     /* 64px */
-  
+
   /* Shadow Depths */
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
-  --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
-  --shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
-  --shadow-xl: 0 20px 25px rgba(0,0,0,0.15);
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.4);
+  --shadow-lg: 0 10px 15px rgba(0,0,0,0.4);
+  --shadow-xl: 0 20px 25px rgba(0,0,0,0.5);
 }
 
 :root {
+  --color-primary: #d4af37;
+  --color-primary-foreground: #000000;
+  --color-secondary: #c5a028;
+  --color-background: #09090b;
+  --color-surface: rgba(255,255,255,0.05);
+  --color-surface-solid: #131316;
+  --color-text: #fafafa;
+  --color-text-muted: #a1a1aa;
+  --color-border: rgba(255,255,255,0.1);
+  --color-border-solid: #27272a;
+  --color-danger: #ef4444;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-info: #3b82f6;
+
+  --font-heading: 'Inter', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
   /* Typography */
   font-family: var(--font-body);
   line-height: 1.6;
   font-weight: 400;
 
-  /* Light mode by default */
-  color-scheme: light;
-  color: var(--color-text);
-  background-color: var(--color-background);
+  /* Always dark */
+  color-scheme: dark;
+  color: #fafafa;
+  background-color: #09090b;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -65,28 +84,28 @@
   --safe-area-right: env(safe-area-inset-right);
 }
 
-/* Dark mode support */
-:root.dark {
-  color-scheme: dark;
-  color: var(--color-dark-text);
-  background-color: var(--color-dark-background);
-}
-
 body {
   margin: 0;
   min-height: 100vh;
-  background-color: var(--color-background);
+  background-color: #09090b;
+  color: #fafafa;
+  font-family: var(--font-body);
   overflow-x: hidden;
-  
+
+  /* Subtle dark gradient */
+  background-image: radial-gradient(circle at 50% 0%, #131316 0%, #09090b 60%);
+  background-attachment: fixed;
+
   /* Mobile Optimizations */
   -webkit-tap-highlight-color: transparent;
 }
 
-body.dark {
-  background-color: var(--color-dark-background);
-  /* Subtle dark gradient */
-  background-image: radial-gradient(circle at 50% 0%, #1E293B 0%, #0F172A 60%);
-  background-attachment: fixed;
+/* --- Glass Panel Utility --- */
+.glass-panel {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  backdrop-filter: blur(12px);
+  border-radius: 0.75rem;
 }
 
 /* --- Headings --- */
@@ -94,11 +113,7 @@ h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-heading);
   font-weight: 600;
   line-height: 1.2;
-  color: var(--color-text);
-}
-
-.dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6 {
-  color: var(--color-dark-text);
+  color: #fafafa;
 }
 
 /* --- Mobile Safe Area Utilities --- */
@@ -129,10 +144,10 @@ h1, h2, h3, h4, h5, h6 {
   margin-top: env(safe-area-inset-top);
 }
 
-/* --- Flat Design Components --- */
+/* --- Card Component --- */
 
 .card {
-  background: var(--color-surface);
+  background: rgba(255,255,255,0.05);
   border-radius: 12px;
   padding: var(--space-lg);
   box-shadow: var(--shadow-md);
@@ -140,18 +155,16 @@ h1, h2, h3, h4, h5, h6 {
   cursor: pointer;
 }
 
-.dark .card {
-  background: var(--color-dark-surface);
-}
-
 .card:hover {
   box-shadow: var(--shadow-lg);
   transform: translateY(-2px);
 }
 
+/* --- Primary Button --- */
+
 .btn-primary {
-  background: var(--color-cta);
-  color: white;
+  background: #d4af37;
+  color: #000000;
   padding: 12px 24px;
   border-radius: 8px;
   font-family: var(--font-body);
@@ -169,12 +182,12 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .btn-primary:hover {
-  background: #EA580C;
+  background: #c5a028;
 }
 
 .btn-primary:focus {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.3);
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.3);
 }
 
 .btn-primary:disabled {
@@ -182,10 +195,12 @@ h1, h2, h3, h4, h5, h6 {
   cursor: not-allowed;
 }
 
+/* --- Secondary Button --- */
+
 .btn-secondary {
   background: transparent;
-  color: var(--color-primary);
-  border: 2px solid var(--color-primary);
+  color: #d4af37;
+  border: 2px solid #d4af37;
   padding: 10px 22px;
   border-radius: 8px;
   font-family: var(--font-body);
@@ -202,54 +217,37 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .btn-secondary:hover {
-  background: #EFF6FF;
-}
-
-.dark .btn-secondary {
-  color: var(--color-secondary);
-  border-color: var(--color-secondary);
-}
-
-.dark .btn-secondary:hover {
-  background: rgba(59, 130, 246, 0.1);
+  background: rgba(212, 175, 55, 0.1);
 }
 
 .btn-secondary:focus {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2);
 }
+
+/* --- Input --- */
 
 .input {
   padding: 12px 16px;
-  border: 1px solid var(--color-border);
+  border: 1px solid rgba(255,255,255,0.1);
   border-radius: 8px;
   font-size: 16px;
   font-family: var(--font-body);
-  background: var(--color-surface);
-  color: var(--color-text);
+  background: rgba(255,255,255,0.05);
+  color: #fafafa;
   transition: border-color 200ms ease;
   min-height: 44px;
   width: 100%;
 }
 
-.dark .input {
-  background: var(--color-dark-surface);
-  color: var(--color-dark-text);
-  border-color: var(--color-dark-border);
-}
-
 .input:focus {
-  border-color: var(--color-primary);
+  border-color: #d4af37;
   outline: none;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2);
 }
 
 .input::placeholder {
-  color: var(--color-text-muted);
-}
-
-.dark .input::placeholder {
-  color: var(--color-dark-text-muted);
+  color: #a1a1aa;
 }
 
 /* --- Animations --- */
@@ -322,42 +320,30 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Focus visible for keyboard navigation */
 :focus-visible {
-  outline: 2px solid var(--color-primary);
+  outline: 2px solid #d4af37;
   outline-offset: 2px;
 }
 
 /* --- Utility Classes --- */
 
 .text-primary {
-  color: var(--color-primary);
+  color: #d4af37;
 }
 
 .text-cta {
-  color: var(--color-cta);
+  color: #d4af37;
 }
 
 .text-muted {
-  color: var(--color-text-muted);
-}
-
-.dark .text-muted {
-  color: var(--color-dark-text-muted);
+  color: #a1a1aa;
 }
 
 .bg-surface {
-  background-color: var(--color-surface);
-}
-
-.dark .bg-surface {
-  background-color: var(--color-dark-surface);
+  background-color: rgba(255,255,255,0.05);
 }
 
 .border-default {
-  border-color: var(--color-border);
-}
-
-.dark .border-default {
-  border-color: var(--color-dark-border);
+  border-color: rgba(255,255,255,0.1);
 }
 
 .cursor-pointer {
@@ -366,4 +352,12 @@ h1, h2, h3, h4, h5, h6 {
 
 .transition-smooth {
   transition: all 200ms ease;
+}
+
+/* Gold gradient text utility */
+.text-gold-gradient {
+  background: linear-gradient(135deg, #d4af37, #f5d56e);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }

@@ -12,6 +12,49 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 
+// ===== ENVIRONMENT VALIDATION =====
+function validateEnvironment() {
+  const required = {
+    production: ['JWT_SECRET', 'DATABASE_URL'],
+    all: []
+  };
+
+  const missing = [];
+
+  // Check production-required vars
+  if (process.env.NODE_ENV === 'production') {
+    for (const varName of required.production) {
+      if (!process.env[varName]) missing.push(varName);
+    }
+
+    // JWT_SECRET must not be the default
+    if (process.env.JWT_SECRET === 'change-this-to-a-secure-random-string') {
+      console.error('FATAL: JWT_SECRET is still the default value. Set a secure random string.');
+      process.exit(1);
+    }
+  }
+
+  if (missing.length > 0) {
+    console.error(`FATAL: Missing required environment variables: ${missing.join(', ')}`);
+    process.exit(1);
+  }
+}
+
+validateEnvironment();
+
+// ===== SENSITIVE DATA REDACTION =====
+function redactSensitive(obj) {
+  if (!obj) return obj;
+  const redacted = { ...obj };
+  const sensitiveKeys = ['apiKey', 'api_key', 'password', 'token', 'secret', 'authorization', 'x-api-key'];
+  for (const key of Object.keys(redacted)) {
+    if (sensitiveKeys.some(sk => key.toLowerCase().includes(sk.toLowerCase()))) {
+      redacted[key] = '[REDACTED]';
+    }
+  }
+  return redacted;
+}
+
 let JWT_SECRET = process.env.JWT_SECRET;
 
 // Security: Enforce secure JWT_SECRET in production
@@ -104,6 +147,14 @@ app.use(cors({
 }));
 app.set('trust proxy', 1); // Trust first key-value pair in X-Forwarded-For
 
+// HSTS header for production
+if (process.env.NODE_ENV === 'production') {
+  app.use((req, res, next) => {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    next();
+  });
+}
+
 // ===== SECURITY MIDDLEWARE (DoS Protection) =====
 
 const MAX_SYNC_ITEMS = 100; // Prevent DoS by limiting batch size
@@ -122,16 +173,25 @@ const authLimiter = rateLimit({
   message: { error: 'Too many login attempts, please try again after 15 minutes.' }
 });
 
+const refineLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 10, // 10 requests per minute per user for expensive AI operations
+  message: { error: 'Too many refinement requests. Please wait a moment.' },
+  keyGenerator: (req) => req.user?.id || req.ip,
+});
+
 // Apply rate limits
 app.use('/api/', apiLimiter);
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
+app.use('/api/refine', refineLimiter);
 
 // 2. Body Parsing (Granular limits to prevent Memory exhaustion)
 // Specific routes needing large payloads
 app.use('/api/sync/push', express.json({ limit: '50mb' }));
 app.use('/api/export', express.json({ limit: '50mb' }));
 app.use('/api/refine', express.json({ limit: '10mb' }));
+app.use('/api/refine/stream', express.json({ limit: '10mb' }));
 app.use('/api/public/publish', express.json({ limit: '2mb' }));
 
 // Default strict limit for all other routes (login, register, prompts, etc.)
@@ -176,9 +236,28 @@ app.use('/assets', express.static(path.join(distPath, 'assets')));
 
 app.use(express.static(distPath));
 
-// Health check
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok' });
+// Health check (enhanced)
+app.get('/health', async (req, res) => {
+  const health = {
+    status: 'ok',
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+    memory: {
+      used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + 'MB',
+      total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024) + 'MB'
+    }
+  };
+
+  // Check DB connectivity
+  try {
+    await pool.query('SELECT 1');
+    health.database = 'connected';
+  } catch (err) {
+    health.database = 'disconnected';
+    health.status = 'degraded';
+  }
+
+  res.status(health.status === 'ok' ? 200 : 503).json(health);
 });
 
 // Authentication Middleware
@@ -311,15 +390,69 @@ app.post('/api/refine', authenticateToken, async (req, res) => {
   if (!provider || !apiKey) return res.status(400).json({ error: 'AI Provider and API Key are required' });
 
   try {
-    console.log(`🚀 Refining idea with ${provider}...`);
+    // Never log API keys - only log safe fields
+    console.log(`🚀 Refining idea with ${provider} (model: ${model || 'default'})...`);
     const orchestrator = new AgentOrchestrator({ provider, apiKey, model });
     const result = await orchestrator.refineIdea(idea);
-    
+
     // Increment version if it's an update? For now, just return
     res.json(result);
   } catch (error) {
     console.error('Refinement error:', error.message);
     res.status(500).json({ error: error.message });
+  }
+});
+
+// Streaming refinement endpoint (SSE)
+app.post('/api/refine/stream', authenticateToken, async (req, res) => {
+  const { idea, provider, apiKey, model } = req.body;
+
+  if (!idea || !provider || !apiKey) {
+    return res.status(400).json({ error: 'Missing required fields: idea, provider, apiKey' });
+  }
+
+  // Set up SSE headers
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+
+  const sendEvent = (type, data) => {
+    res.write(`event: ${type}\ndata: ${JSON.stringify(data)}\n\n`);
+  };
+
+  try {
+    const orchestrator = new AgentOrchestrator({ provider, apiKey, model });
+
+    // Phase 1: Architect
+    sendEvent('phase', { phase: 'architect', status: 'started', message: 'Structuring your idea...' });
+    const architectResult = await orchestrator.runArchitect(idea);
+    sendEvent('phase', { phase: 'architect', status: 'completed', data: architectResult });
+
+    // Phase 2: Critic
+    sendEvent('phase', { phase: 'critic', status: 'started', message: 'Validating for gaps...' });
+    const criticResult = await orchestrator.runCritic(architectResult);
+    sendEvent('phase', { phase: 'critic', status: 'completed', data: criticResult });
+
+    // Phase 3: Designer
+    sendEvent('phase', { phase: 'designer', status: 'started', message: 'Designing mockup...' });
+    const designerResult = await orchestrator.runDesigner(architectResult);
+    sendEvent('phase', { phase: 'designer', status: 'completed', data: designerResult });
+
+    // Final result
+    sendEvent('complete', {
+      spec: architectResult,
+      audit: criticResult,
+      design: designerResult
+    });
+
+  } catch (error) {
+    sendEvent('error', {
+      message: error.message,
+      phase: error.phase || 'unknown'
+    });
+  } finally {
+    res.end();
   }
 });
 

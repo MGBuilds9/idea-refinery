@@ -1,6 +1,7 @@
 # BLUEPRINT ARCHITECT v1.5: IDEA REFINERY
 > **Version:** 1.5.0 (Engineering Grade)
-> **Status:** IN-PROGRESS
+> **Status:** RELEASED (February 10, 2026)
+> **Deferred to v2:** Team collaboration (organization_id), plugin system (custom agents), billing/SaaS model
 > **Platform:** Web PWA + Native Mobile (Capacitor)
 > **Stack:** Vite React, Dexie.js (Local), Node/Express (Self-Hosted), PostgreSQL (Docker)
 

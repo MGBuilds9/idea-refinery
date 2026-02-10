@@ -1,79 +1,26 @@
 export const THEMES = {
-    'light-blue': {
-        id: 'light-blue',
-        name: 'Ocean Blue',
-        description: 'Cool and professional',
+    'refinery': {
+        id: 'refinery',
+        name: 'Refinery Dark',
+        description: 'Premium Utility — dark with gold accents',
         colors: {
-            primary: '#3B82F6',
-            secondary: '#60A5FA',
-            cta: '#F97316',
-            background: '#F8FAFC',
-            surface: '#FFFFFF',
-            text: '#1E293B',
-            textMuted: '#64748B',
-            border: '#E2E8F0'
-        }
-    },
-    'light-pink': {
-        id: 'light-pink',
-        name: 'Blossom Pink',
-        description: 'Soft and creative',
-        colors: {
-            primary: '#EC4899',
-            secondary: '#F472B6',
-            cta: '#F59E0B',
-            background: '#FDF2F8',
-            surface: '#FFFFFF',
-            text: '#831843',
-            textMuted: '#9F1239',
-            border: '#FBCFE8'
-        }
-    },
-    'light-green': {
-        id: 'light-green',
-        name: 'Mint Fresh',
-        description: 'Natural and calming',
-        colors: {
-            primary: '#10B981',
-            secondary: '#34D399',
-            cta: '#F59E0B',
-            background: '#F0FDF4',
-            surface: '#FFFFFF',
-            text: '#064E3B',
-            textMuted: '#047857',
-            border: '#D1FAE5'
-        }
-    },
-    'light-lavender': {
-        id: 'light-lavender',
-        name: 'Lavender Dream',
-        description: 'Elegant and soothing',
-        colors: {
-            primary: '#8B5CF6',
-            secondary: '#A78BFA',
-            cta: '#F97316',
-            background: '#FAF5FF',
-            surface: '#FFFFFF',
-            text: '#5B21B6',
-            textMuted: '#7C3AED',
-            border: '#E9D5FF'
-        }
-    },
-    'dark': {
-        id: 'dark',
-        name: 'Dark Mode',
-        description: 'Easy on the eyes',
-        colors: {
-            primary: '#60A5FA',
-            secondary: '#93C5FD',
-            cta: '#FB923C',
-            background: '#0F172A',
-            surface: '#1E293B',
-            text: '#F1F5F9',
-            textMuted: '#94A3B8',
-            border: '#334155'
+            primary: '#d4af37',
+            primaryForeground: '#000000',
+            secondary: '#c5a028',
+            cta: '#d4af37',
+            background: '#09090b',
+            surface: 'rgba(255,255,255,0.05)',
+            surfaceSolid: '#131316',
+            text: '#fafafa',
+            textMuted: '#a1a1aa',
+            border: 'rgba(255,255,255,0.1)',
+            borderSolid: '#27272a',
+            danger: '#ef4444',
+            success: '#22c55e',
+            warning: '#f59e0b',
+            info: '#3b82f6'
         }
     }
 };
 
-export const DEFAULT_THEME = 'light-blue';
+export const DEFAULT_THEME = 'refinery';

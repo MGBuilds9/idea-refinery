@@ -12,33 +12,24 @@ export const useTheme = () => {
 };
 
 export const ThemeProvider = ({ children }) => {
-    const [currentTheme, setCurrentTheme] = useState(() => {
-        // Load theme from localStorage or use default
-        const saved = localStorage.getItem('app_theme');
-        return saved && THEMES[saved] ? saved : DEFAULT_THEME;
-    });
+    const [currentTheme, setCurrentTheme] = useState(DEFAULT_THEME);
 
-    // Apply theme to document root
+    // Apply theme to document root — always dark
     useEffect(() => {
         const theme = THEMES[currentTheme];
         if (!theme) return;
 
         const root = document.documentElement;
 
+        // Always apply dark class
+        root.classList.add('dark');
+        document.body.classList.add('dark');
+
         // Apply theme colors as CSS variables
         Object.entries(theme.colors).forEach(([key, value]) => {
             const cssVarName = `--color-${key.replace(/([A-Z])/g, '-$1').toLowerCase()}`;
             root.style.setProperty(cssVarName, value);
         });
-
-        // Add/remove dark class for dark mode
-        if (currentTheme === 'dark') {
-            root.classList.add('dark');
-            document.body.classList.add('dark');
-        } else {
-            root.classList.remove('dark');
-            document.body.classList.remove('dark');
-        }
 
         // Save to localStorage
         localStorage.setItem('app_theme', currentTheme);

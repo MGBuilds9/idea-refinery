@@ -25,7 +25,7 @@ const HistoryItem = memo(function HistoryItem({
   return (
     <div
       style={{ animationDelay: `${index * 50}ms` }}
-      className="group relative glass-panel rounded-xl p-6 transition-all duration-300 hover:border-[var(--color-gold-subtle)] hover:shadow-[0_0_30px_rgba(212,175,55,0.05)] flex items-start justify-between gap-6 animate-fade-in"
+      className="group relative glass-panel rounded-xl p-6 transition-all duration-300 hover:border-[#d4af37]/30 hover:shadow-[0_0_30px_rgba(212,175,55,0.05)] flex items-start justify-between gap-6 animate-fade-in"
     >
       <div className="flex-1 cursor-pointer" onClick={() => onLoad(item)}>
         <div className="flex items-center gap-3 mb-3">
@@ -38,7 +38,7 @@ const HistoryItem = memo(function HistoryItem({
             </span>
         </div>
 
-        <h3 className="text-lg text-white font-medium mb-2 group-hover:text-[var(--color-gold-primary)] transition-colors line-clamp-1">
+        <h3 className="text-lg text-white font-medium mb-2 group-hover:text-[#d4af37] transition-colors line-clamp-1">
           {item.idea || 'Untitled Project'}
         </h3>
         <p className="text-zinc-500 text-sm line-clamp-2 pr-12 leading-relaxed">
@@ -55,7 +55,7 @@ const HistoryItem = memo(function HistoryItem({
           className={`p-3 rounded-lg transition-all ${
             isEmailSuccess
               ? 'text-emerald-400 bg-emerald-900/20'
-              : 'text-zinc-500 hover:text-[var(--color-gold-primary)] hover:bg-[var(--color-gold-subtle)]'
+              : 'text-zinc-500 hover:text-[#d4af37] hover:bg-[#d4af37]/10'
           } ${isEmailing ? 'opacity-50 cursor-wait' : ''}`}
           title="Email to Me"
         >
@@ -83,7 +83,7 @@ const HistoryItem = memo(function HistoryItem({
 
         <button
           onClick={() => onLoad(item)}
-          className="p-3 bg-[var(--color-gold-primary)] hover:bg-[#C5A028] text-black rounded-lg transition-all shadow-[0_0_10px_var(--color-gold-subtle)] hover:shadow-[0_0_20px_var(--color-gold-glow)]"
+          className="p-3 bg-[#d4af37] hover:bg-[#c5a028] text-black rounded-lg transition-all shadow-[0_0_10px_rgba(212,175,55,0.1)] hover:shadow-[0_0_20px_rgba(212,175,55,0.2)]"
           title="Open Project"
         >
           <ArrowRight className="w-4 h-4" />

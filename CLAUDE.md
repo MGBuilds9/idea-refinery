@@ -2,14 +2,14 @@
 
 ## Project Context
 
-- Summary: Knowledge management system.
-- Type: TBD
-- Stack: TBD
-- Package Manager: TBD
-- Test Runner: TBD
-- Build Command: TBD
-- Deploy Target: TBD
-- Database: TBD
+- Summary: AI-powered idea-to-blueprint refinement system with three-agent pipeline
+- Type: Full-stack web app + mobile (Capacitor)
+- Stack: React 19 + Vite 7 + Express 5 + PostgreSQL 16 + Dexie.js
+- Package Manager: npm
+- Test Runner: Vitest + Playwright
+- Build Command: npm run build
+- Deploy Target: Docker → ideas.mkgbuilds.com (Coolify)
+- Database: PostgreSQL 16 (Docker) + Dexie.js (client IndexedDB)
 
 ## Project Rules
 
@@ -21,10 +21,23 @@
 ## Commands
 
 ```bash
-# Add commonly used commands here
+npm run dev       # Vite dev server (port 5173)
+npm run server    # Express API server (port 3001)
+npm run dev:all   # Both frontend + backend (concurrently)
+npm run build     # Production build
+npm run e2e       # Playwright E2E tests
+npm test          # Vitest unit tests (will be added)
 ```
 
 ## Session Log
 
 ### February 5, 2026 - Initialization
 - Created project CLAUDE.md template.
+
+### February 10, 2026 - Phase 1 Foundation
+- Filled in all TBD fields with actual project details.
+- Updated AI model IDs to latest versions (Claude Sonnet 4.5, Haiku 4.5, Opus 4.6).
+- Updated server AgentOrchestrator model defaults.
+- Added common commands section.
+- Installed dev dependencies: vitest, @testing-library/react, @testing-library/jest-dom, jsdom, @vitest/coverage-v8.
+- Installed runtime dependencies: zod, sonner.

@@ -1,5 +1,6 @@
 import React, { useState, useCallback, memo } from 'react';
 import { History } from 'lucide-react';
+import { toast } from 'sonner';
 import HistoryItem from './HistoryItem';
 import { getConversation } from '../services/db';
 
@@ -31,8 +32,6 @@ const HistoryView = ({ historyItems, onLoad, onDelete, onLoadMore, hasMore }) =>
   const handleEmail = useCallback(async (e, item) => {
     e.stopPropagation();
 
-    // ⚡ Bolt Optimization: Ensure we have the full item content (blueprint/questions)
-    // since the history list now only loads summaries.
     let fullItem = item;
     if (item.isSummary) {
         const loaded = await getConversation(item.id);
@@ -40,14 +39,13 @@ const HistoryView = ({ historyItems, onLoad, onDelete, onLoadMore, hasMore }) =>
     }
 
     const { type } = getArtifactContent(fullItem);
-    
+
     if (!confirm(`Email this ${type.toLowerCase()} to yourself?`)) return;
-    
+
     setEmailingId(item.id);
     setEmailSuccess(null);
-    
+
     try {
-      // ⚡ Bolt Optimization: Lazy load full content if this is a summary
       let fullItem = item;
       if (item.isSummary) {
           const loaded = await getConversation(item.id);
@@ -57,21 +55,16 @@ const HistoryView = ({ historyItems, onLoad, onDelete, onLoadMore, hasMore }) =>
 
       const { llm } = await import('../lib/llm');
       const { SecureStorage } = await import('../services/secure_storage');
-      
+
       const target = localStorage.getItem('target_email');
-      
-      // Secure retrieval
+
       let apiKey = null;
       if (llm.activePin) {
           apiKey = await SecureStorage.getItem('resend_api_key', llm.activePin);
       }
-      
-      // Fallback: If not found securely, try local (legacy) but warn/log? 
-      // Actually strictly ONLY allow secure if possible, but for migration maybe check?
-      // No, let's enforce security. If they migrated, it's in SecureStorage.
 
       if (!target || !apiKey) {
-        alert('Please set a Target Email and Resend API Key in Settings first (and ensure PIN is unlocked).');
+        toast.warning('Please set a Target Email and Resend API Key in Settings first (and ensure PIN is unlocked).');
         setEmailingId(null);
         return;
       }
@@ -89,7 +82,7 @@ const HistoryView = ({ historyItems, onLoad, onDelete, onLoadMore, hasMore }) =>
       setTimeout(() => setEmailSuccess(null), 2000);
     } catch (err) {
       console.error(err);
-      alert('Failed to send email. Check Settings.');
+      toast.error('Failed to send email. Check Settings.');
     } finally {
       setEmailingId(null);
     }
@@ -98,7 +91,7 @@ const HistoryView = ({ historyItems, onLoad, onDelete, onLoadMore, hasMore }) =>
   return (
     <div className="max-w-5xl mx-auto animate-fade-in">
       <div className="mb-10">
-        <h2 className="text-4xl font-serif text-gold-gradient mb-3">Project History</h2>
+        <h2 className="text-4xl font-sans font-bold text-gold-gradient mb-3">Project History</h2>
         <p className="text-zinc-500 font-mono text-sm tracking-wide">Resume previous sessions or manage your archives.</p>
       </div>
 
@@ -130,7 +123,7 @@ const HistoryView = ({ historyItems, onLoad, onDelete, onLoadMore, hasMore }) =>
             <button
                 onClick={handleLoadMoreClick}
                 disabled={loadingMore}
-                className="px-6 py-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800 text-zinc-400 hover:text-white transition-all font-mono text-sm border border-zinc-700/50 flex items-center gap-2"
+                className="px-6 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-all font-mono text-sm border border-white/10 flex items-center gap-2"
             >
                 {loadingMore ? 'Loading...' : 'Load More'}
             </button>

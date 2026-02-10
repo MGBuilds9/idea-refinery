@@ -1,4 +1,11 @@
+/**
+ * AgentOrchestrator - Server-side AI orchestration (CANONICAL PATH)
+ *
+ * Handles the three-agent pipeline: Architect -> Critic -> Designer
+ * This is the primary AI execution path when the user is authenticated.
+ */
 import { DEFAULT_PROMPT_TEMPLATES as DEFAULT_PROMPTS } from '../../src/lib/prompt_templates.js';
+import { extractJSON } from '../lib/json-extractor.js';
 
 export class AgentOrchestrator {
   constructor(config) {
@@ -29,13 +36,13 @@ export class AgentOrchestrator {
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: this.model || 'claude-3-5-sonnet-20241022',
+        model: this.model || 'claude-sonnet-4-5-20250929',
         system,
         messages: [{ role: 'user', content: user }],
         max_tokens: 4096
       })
     });
-    
+
     const data = await response.json();
     if (!response.ok) throw new Error(data.error?.message || 'Anthropic API error');
     return data.content[0].text;
@@ -56,7 +63,7 @@ export class AgentOrchestrator {
         ]
       })
     });
-    
+
     const data = await response.json();
     if (!response.ok) throw new Error(data.error?.message || 'OpenAI API error');
     return data.choices[0].message.content;
@@ -65,7 +72,7 @@ export class AgentOrchestrator {
   async callGemini(system, user) {
     const modelName = this.model || 'gemini-1.5-pro';
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
-    
+
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -78,49 +85,92 @@ export class AgentOrchestrator {
         ]
       })
     });
-    
+
     const data = await response.json();
     if (!response.ok) throw new Error(data.error?.message || 'Gemini API error');
     return data.candidates[0].content.parts[0].text;
   }
 
   /**
-   * Run the full pipeline
-   * @param {string} rawIdea 
-   * @returns {Object} { spec, design, audit }
+   * Phase 1: The Architect - Structure raw idea into IdeaSpec JSON
+   * @param {string} rawIdea - User's raw idea text
+   * @returns {Promise<Object>} Parsed IdeaSpec object
    */
-  async refineIdea(rawIdea) {
-    // 1. Architect: Structure the idea
+  async runArchitect(rawIdea) {
     const architectPrompt = JSON.parse(DEFAULT_PROMPTS.architect);
     const architectResponse = await this.callLLM(
       architectPrompt.system,
       architectPrompt.prompt.replace('${idea}', rawIdea)
     );
-    
-    // Parse the JSON spec
-    let ideaSpec;
-    try {
-      const jsonMatch = architectResponse.match(/\{[\s\S]*\}/);
-      ideaSpec = JSON.parse(jsonMatch ? jsonMatch[0] : architectResponse);
-    } catch (e) {
-      console.error('Failed to parse Architect response:', architectResponse);
-      throw new Error('Architect failed to output valid JSON');
-    }
 
-    // 2. Designer: Create design tokens and structures
+    const extraction = extractJSON(architectResponse);
+    if (!extraction.success) {
+      console.error('Failed to extract JSON from Architect response:', {
+        error: extraction.error,
+        raw: extraction.raw,
+        fullResponse: architectResponse.substring(0, 1000)
+      });
+      const err = new Error(`Architect failed to output valid JSON: ${extraction.error}`);
+      err.phase = 'architect';
+      throw err;
+    }
+    console.log(`Architect JSON extracted via strategy: ${extraction.strategy}`);
+    return extraction.data;
+  }
+
+  /**
+   * Phase 2: The Critic - Audit the spec and design for issues
+   * @param {Object} ideaSpec - Structured IdeaSpec object
+   * @param {string} [designResponse] - Optional design proposal to include in audit
+   * @returns {Promise<Object|string>} Audit result (parsed JSON if possible, raw string otherwise)
+   */
+  async runCritic(ideaSpec, designResponse) {
+    const criticPrompt = JSON.parse(DEFAULT_PROMPTS.critic);
+    let auditorInput = `IDEA SPEC:\n${JSON.stringify(ideaSpec, null, 2)}`;
+    if (designResponse) {
+      auditorInput += `\n\nDESIGN PROPOSAL:\n${designResponse}`;
+    }
+    const auditResponse = await this.callLLM(
+      criticPrompt.system,
+      criticPrompt.prompt.replace('${proposal}', auditorInput)
+    );
+
+    // Try to parse as JSON; fall back to raw string
+    const extraction = extractJSON(auditResponse);
+    if (extraction.success) {
+      return extraction.data;
+    }
+    return auditResponse;
+  }
+
+  /**
+   * Phase 3: The Designer - Generate design tokens and structures
+   * @param {Object} ideaSpec - Structured IdeaSpec object
+   * @returns {Promise<string>} Design proposal text
+   */
+  async runDesigner(ideaSpec) {
     const designerPrompt = JSON.parse(DEFAULT_PROMPTS.designer);
     const designerResponse = await this.callLLM(
       designerPrompt.system,
       designerPrompt.prompt.replace('${spec}', JSON.stringify(ideaSpec, null, 2))
     );
+    return designerResponse;
+  }
 
-    // 3. Critic: Audit the proposal
-    const criticPrompt = JSON.parse(DEFAULT_PROMPTS.critic);
-    const auditorInput = `IDEA SPEC:\n${JSON.stringify(ideaSpec, null, 2)}\n\nDESIGN PROPOSAL:\n${designerResponse}`;
-    const auditResponse = await this.callLLM(
-      criticPrompt.system,
-      criticPrompt.prompt.replace('${proposal}', auditorInput)
-    );
+  /**
+   * Run the full pipeline (blocking, non-streaming)
+   * @param {string} rawIdea
+   * @returns {Object} { spec, design, audit }
+   */
+  async refineIdea(rawIdea) {
+    // 1. Architect: Structure the idea
+    const ideaSpec = await this.runArchitect(rawIdea);
+
+    // 2. Designer: Create design tokens and structures
+    const designerResponse = await this.runDesigner(ideaSpec);
+
+    // 3. Critic: Audit the proposal (includes design for context)
+    const auditResponse = await this.runCritic(ideaSpec, designerResponse);
 
     return {
       spec: ideaSpec,
@@ -137,7 +187,7 @@ export class AgentOrchestrator {
    */
   async generateArtifacts(spec, design) {
     const tech = spec.tech_stack || {};
-    
+
     // 1. .cursorrules Template
     const cursorRules = `# Cursor Rules for ${spec.meta?.name || 'New Project'}
 - Stack: ${tech.frontend}, ${tech.backend}, ${tech.database}

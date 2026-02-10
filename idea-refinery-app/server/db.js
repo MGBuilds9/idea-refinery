@@ -100,9 +100,7 @@ const initDb = async () => {
         );
       `);
       
-      // Seed default admin if no users exist
-      // Security Hardening: Do NOT create default admin with hardcoded password automatically in production.
-      // Only create if explicitly requested via environment variable.
+      // SECURITY: No default credentials in production
       // Migration: Add user_id to prompt_overrides and scope uniqueness to user
       try {
         await client.query(`
@@ -124,23 +122,22 @@ const initDb = async () => {
         console.warn('⚠️ Migration warning:', e.message);
       }
 
-      if (process.env.SEED_DEFAULT_ADMIN === 'true') {
-        const userCheck = await client.query('SELECT count(*) FROM users');
-        if (parseInt(userCheck.rows[0].count) === 0) {
+      // SECURITY: No default credentials in production
+      const userCheck = await client.query('SELECT count(*) FROM users');
+      if (parseInt(userCheck.rows[0].count) === 0) {
+        if (process.env.NODE_ENV === 'production') {
+          console.log('ℹ️  No default admin created in production. Register via the app.');
+        } else if (process.env.SEED_DEFAULT_ADMIN === 'true') {
           console.log('🌱 Seeding default admin user...');
-          // Hash 'admin123'
           const hashedPassword = await bcrypt.hash('admin123', 10);
           await client.query(
             'INSERT INTO users (username, password_hash) VALUES ($1, $2)',
             ['admin', hashedPassword]
           );
-          console.log('⚠️  Default user created: admin / admin123 (Change immediately!)');
+          console.warn('⚠️ WARNING: Default admin user created (admin/admin123). Change this immediately.');
+        } else {
+          console.log('ℹ️  No users found. In development, run with SEED_DEFAULT_ADMIN=true to create default admin.');
         }
-      } else {
-         const userCheck = await client.query('SELECT count(*) FROM users');
-         if (parseInt(userCheck.rows[0].count) === 0) {
-             console.log('ℹ️  No users found. Run with SEED_DEFAULT_ADMIN=true to create default admin.');
-         }
       }
 
       console.log('✅ Database initialized');

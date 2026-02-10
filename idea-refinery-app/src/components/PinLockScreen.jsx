@@ -34,25 +34,22 @@ export default function PinLockScreen({ onSuccess, isSetup = false }) {
 
   useEffect(() => {
     if (pin.length === PIN_LENGTH) {
-      // Simulate verification delay
       setTimeout(async () => {
         if (isSetup) {
-          // New Setup Flow: Set PIN in SecureStorage
           try {
             const { SecureStorage } = await import('../services/secure_storage');
             await SecureStorage.setPin(pin);
-            onSuccess(pin); // Pass pin back for key re-encryption if needed
+            onSuccess(pin);
           } catch (e) {
             console.error(e);
             setError(true);
             setPin('');
           }
         } else {
-          // Verification Flow
           try {
             const { SecureStorage } = await import('../services/secure_storage');
             const isValid = await SecureStorage.verifyPin(pin);
-            
+
             if (isValid) {
               onSuccess(pin);
             } else {
@@ -61,7 +58,7 @@ export default function PinLockScreen({ onSuccess, isSetup = false }) {
             }
           } catch (e) {
             console.error('PIN Check Error:', e);
-            setError(true); // Fail secure
+            setError(true);
             setPin('');
           }
         }
@@ -70,37 +67,41 @@ export default function PinLockScreen({ onSuccess, isSetup = false }) {
   }, [pin, isSetup, onSuccess]);
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-blue-50 via-white to-orange-50 flex flex-col items-center justify-center z-50 animate-fade-in">
-      <div className="mb-8 flex flex-col items-center">
-        <div className={`p-6 rounded-2xl border-2 transition-all duration-300 ${error ? 'border-red-400 bg-red-50 text-red-500' : 'border-[var(--color-primary)] bg-blue-50 text-[var(--color-primary)]'} shadow-lg`}>
+    <div className="fixed inset-0 bg-[#09090b] flex flex-col items-center justify-center z-50 animate-fade-in">
+      {/* Background Ambience */}
+      <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-5 pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-tr from-[#d4af37]/5 to-transparent block" />
+
+      <div className="relative z-10 mb-8 flex flex-col items-center">
+        <div className={`p-6 rounded-2xl border-2 transition-all duration-300 ${error ? 'border-red-500/50 bg-red-900/10 text-red-400' : 'border-[#d4af37]/30 bg-[#d4af37]/5 text-[#d4af37]'} shadow-lg`}>
           {pin.length === PIN_LENGTH ? <Unlock size={40} className="animate-pulse" /> : <Lock size={40} />}
         </div>
-        <h2 className="mt-6 text-2xl font-[var(--font-heading)] font-bold tracking-wide text-[var(--color-text)]">
+        <h2 className="mt-6 text-2xl font-sans font-bold tracking-wide text-white">
           {error ? 'Incorrect PIN' : (isSetup ? 'Set Your PIN' : 'Enter PIN')}
         </h2>
-        <p className="mt-2 text-sm text-[var(--color-text-muted)] font-[var(--font-body)]">
+        <p className="mt-2 text-sm text-zinc-500 font-sans">
           {error ? 'Please try again' : (isSetup ? 'Create a 4-digit PIN to secure your vault' : 'Unlock to access your vault')}
         </p>
       </div>
 
-      <div className="flex gap-3 mb-12">
+      <div className="relative z-10 flex gap-3 mb-12">
         {Array.from({ length: PIN_LENGTH }).map((_, i) => (
           <div
             key={i}
             className={`w-4 h-4 rounded-full transition-all duration-300 ${i < pin.length
-                ? 'bg-[var(--color-primary)] shadow-[0_0_12px_rgba(59,130,246,0.5)] scale-110'
-                : 'bg-gray-200 border-2 border-gray-300'
+                ? 'bg-[#d4af37] shadow-[0_0_12px_rgba(212,175,55,0.5)] scale-110'
+                : 'bg-zinc-800 border-2 border-zinc-700'
               }`}
           />
         ))}
       </div>
 
-      <div className="grid grid-cols-3 gap-4 w-80">
+      <div className="relative z-10 grid grid-cols-3 gap-4 w-80">
         {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
           <button
             key={num}
             onClick={() => handlePress(num)}
-            className="w-20 h-20 rounded-2xl border-2 border-[var(--color-border)] bg-white text-2xl font-[var(--font-heading)] font-bold text-[var(--color-text)] hover:bg-blue-50 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] transition-all active:scale-95 shadow-sm hover:shadow-md flex items-center justify-center"
+            className="w-20 h-20 rounded-2xl border-2 border-white/10 bg-white/5 text-2xl font-sans font-bold text-white hover:bg-[#d4af37]/10 hover:border-[#d4af37]/30 hover:text-[#d4af37] transition-all active:scale-95 shadow-sm hover:shadow-md flex items-center justify-center"
           >
             {num}
           </button>
@@ -108,7 +109,7 @@ export default function PinLockScreen({ onSuccess, isSetup = false }) {
         <div className="col-start-2">
           <button
             onClick={() => handlePress(0)}
-            className="w-20 h-20 rounded-2xl border-2 border-[var(--color-border)] bg-white text-2xl font-[var(--font-heading)] font-bold text-[var(--color-text)] hover:bg-blue-50 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] transition-all active:scale-95 shadow-sm hover:shadow-md flex items-center justify-center"
+            className="w-20 h-20 rounded-2xl border-2 border-white/10 bg-white/5 text-2xl font-sans font-bold text-white hover:bg-[#d4af37]/10 hover:border-[#d4af37]/30 hover:text-[#d4af37] transition-all active:scale-95 shadow-sm hover:shadow-md flex items-center justify-center"
           >
             0
           </button>
@@ -116,15 +117,15 @@ export default function PinLockScreen({ onSuccess, isSetup = false }) {
         <div className="col-start-3">
           <button
             onClick={handleDelete}
-            className="w-20 h-20 rounded-2xl border-2 border-transparent bg-gray-100 text-[var(--color-text-muted)] hover:bg-red-50 hover:text-red-500 transition-all active:scale-95 flex items-center justify-center"
+            className="w-20 h-20 rounded-2xl border-2 border-transparent bg-white/5 text-zinc-500 hover:bg-red-900/10 hover:text-red-400 transition-all active:scale-95 flex items-center justify-center"
           >
             <Delete size={28} />
           </button>
         </div>
       </div>
 
-      <p className="mt-12 text-xs text-[var(--color-text-muted)] font-[var(--font-body)]">
-        IDEA REFINERY • Premium Edition
+      <p className="relative z-10 mt-12 text-xs text-zinc-600 font-sans">
+        IDEA REFINERY -- Premium Edition
       </p>
     </div>
   );

@@ -1,157 +1,131 @@
 import React, { useState, useEffect, useCallback, memo, useRef } from 'react';
-import { FileText, ArrowRight, ArrowLeft, SkipForward, Check } from 'lucide-react';
+import { FileText, ArrowLeft, Check, SkipForward } from 'lucide-react';
 import QuestionItem from './QuestionItem';
 
 const QuestionsStage = memo(function QuestionsStage({ questions, answers, setAnswers, onNext, onBack, loading }) {
-  const [currentIndex, setCurrentIndex] = useState(0);
-
-  // ⚡ Bolt Optimization: Local state for answers to prevent global re-renders on every keystroke
   const [localAnswers, setLocalAnswers] = useState(answers);
   const localAnswersRef = useRef(localAnswers);
+  const firstUnansweredRef = useRef(null);
 
   useEffect(() => {
     setLocalAnswers(answers);
   }, [answers]);
 
-  // ⚡ Bolt Optimization: Keep ref in sync for unmount flush
   useEffect(() => {
     localAnswersRef.current = localAnswers;
   }, [localAnswers]);
 
-  // ⚡ Bolt Optimization: Flush local answers to global state ONLY on unmount to prevent
-  // triggering full-app re-renders on every "Next" click.
   useEffect(() => {
     return () => {
       setAnswers(localAnswersRef.current);
     };
   }, [setAnswers]);
 
+  // Auto-focus the first unanswered question
+  useEffect(() => {
+    if (firstUnansweredRef.current) {
+      firstUnansweredRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, []);
+
   const handleAnswerChange = useCallback((index, value) => {
     setLocalAnswers(prev => ({ ...prev, [index]: value }));
   }, []);
 
   const handleBlur = useCallback(() => {
-      // ⚡ Bolt: No global update on blur to avoid re-renders.
-      // State is flushed on unmount.
   }, []);
 
-  const handleNext = () => {
-    if (currentIndex < questions.length - 1) {
-      setCurrentIndex(prev => prev + 1);
-    } else {
-      // ⚡ Bolt: Ensure global state is synced before finishing
-      setAnswers(localAnswers);
-      onNext(localAnswers);
-    }
+  const handleFinish = () => {
+    setAnswers(localAnswers);
+    onNext(localAnswers);
   };
 
-  const handleSkip = () => {
-    let currentAnswers = localAnswers;
-    // Ensure the current answer is empty string if undefined (explicit skip)
-    if (!currentAnswers[currentIndex]) {
-      const newAnswers = { ...currentAnswers, [currentIndex]: '' };
-      setLocalAnswers(newAnswers);
-      currentAnswers = newAnswers;
-    }
-    
-    if (currentIndex < questions.length - 1) {
-      setCurrentIndex(prev => prev + 1);
-    } else {
-      // ⚡ Bolt: Ensure global state is synced before finishing
-      setAnswers(currentAnswers);
-      onNext(currentAnswers);
-    }
+  const handleAnswerAllLater = () => {
+    setAnswers(localAnswers);
+    onNext(localAnswers);
   };
 
-  const handleBack = () => {
-    if (currentIndex > 0) {
-      setCurrentIndex(prev => prev - 1);
-    } else {
-      onBack();
-    }
-  };
+  // Count answered questions (non-empty)
+  const answeredCount = questions.filter((_, i) => localAnswers[i] && localAnswers[i].trim().length > 0).length;
+  const progress = questions.length > 0 ? (answeredCount / questions.length) * 100 : 0;
 
-  const currentQuestion = questions[currentIndex];
-  // Use local answers for rendering
-  const currentAnswer = localAnswers[currentIndex] || '';
-  const isLastQuestion = currentIndex === questions.length - 1;
-  const progress = ((currentIndex + 1) / questions.length) * 100;
+  // Find first unanswered index for auto-focus
+  const firstUnansweredIndex = questions.findIndex((_, i) => !localAnswers[i] || localAnswers[i].trim().length === 0);
 
   return (
     <div className="space-y-8 animate-fade-in max-w-2xl mx-auto">
       {/* Progress Bar */}
-      <div className="w-full bg-zinc-800 rounded-full h-1.5 mb-8">
-        <div 
-          className="bg-[var(--color-primary)] h-1.5 rounded-full transition-all duration-300 ease-out"
+      <div className="w-full bg-zinc-800 rounded-full h-1.5 mb-4">
+        <div
+          className="bg-[#d4af37] h-1.5 rounded-full transition-all duration-300 ease-out"
           style={{ width: `${progress}%` }}
         />
       </div>
 
-      <div className="glass-panel rounded-2xl p-8 min-h-[400px] flex flex-col justify-between">
-        <div className="space-y-6">
-          <div className="flex items-center justify-between mb-2">
-             <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-[var(--color-gold-subtle)]">
-                  <FileText className="w-5 h-5 text-[var(--color-gold-primary)]" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-serif text-white">Question {currentIndex + 1} of {questions.length}</h2>
-                  <p className="text-zinc-500 text-sm font-mono">Refining your blueprint</p>
-                </div>
-             </div>
-             <span className="text-xs font-mono text-zinc-600">
-               {Math.round(progress)}% COMPLETE
-             </span>
+      <div className="glass-panel rounded-2xl p-8 flex flex-col">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-[#d4af37]/10">
+              <FileText className="w-5 h-5 text-[#d4af37]" />
+            </div>
+            <div>
+              <h2 className="text-xl font-sans font-semibold text-white">Refine Your Blueprint</h2>
+              <p className="text-zinc-500 text-sm font-mono">Answer these to fill in the gaps</p>
+            </div>
           </div>
+          <span className="text-xs font-mono text-zinc-600">
+            {answeredCount} of {questions.length} ANSWERED
+          </span>
+        </div>
 
-          <div className="py-4">
-             <QuestionItem
-                key={currentIndex}
-                question={currentQuestion}
-                answer={currentAnswer}
-                index={currentIndex}
+        {/* Scrollable question list */}
+        <div className="space-y-6 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+          {questions.map((question, index) => (
+            <div
+              key={index}
+              ref={index === firstUnansweredIndex ? firstUnansweredRef : null}
+            >
+              <QuestionItem
+                question={question}
+                answer={localAnswers[index] || ''}
+                index={index}
                 onAnswerChange={handleAnswerChange}
                 onBlur={handleBlur}
-                autoFocus={true}
+                autoFocus={index === firstUnansweredIndex}
               />
-          </div>
+            </div>
+          ))}
         </div>
 
         {/* Navigation Controls */}
-        <div className="flex items-center justify-between pt-8 border-t border-zinc-800/50 mt-4">
+        <div className="flex items-center justify-between pt-8 border-t border-white/10 mt-6">
           <button
-            onClick={handleBack}
+            onClick={onBack}
             className="flex items-center gap-2 px-4 py-2 text-zinc-400 hover:text-white transition-colors font-mono text-sm"
           >
             <ArrowLeft className="w-4 h-4" />
-            {currentIndex === 0 ? 'BACK' : 'PREVIOUS'}
+            BACK
           </button>
 
           <div className="flex items-center gap-3">
-             <button
-                onClick={handleSkip}
-                className="flex items-center gap-2 px-4 py-2 text-zinc-500 hover:text-zinc-300 transition-colors font-mono text-sm"
-             >
-                <SkipForward className="w-4 h-4" />
-                SKIP
-             </button>
-
-             <button
-                onClick={handleNext}
+            {answeredCount < questions.length && (
+              <button
+                onClick={handleAnswerAllLater}
                 disabled={loading}
-                className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold font-mono text-sm transition-all shadow-lg
-                  ${isLastQuestion 
-                    ? 'bg-[var(--color-gold-primary)] text-black hover:bg-[#C5A028] shadow-[0_0_20px_var(--color-gold-subtle)]' 
-                    : 'bg-zinc-800 text-white hover:bg-zinc-700 border border-zinc-700'
-                  }
-                `}
-             >
-                {isLastQuestion ? (
-                  <>FINISH <Check className="w-4 h-4" /></>
-                ) : (
-                  <>NEXT <ArrowRight className="w-4 h-4" /></>
-                )}
-             </button>
+                className="flex items-center gap-2 px-4 py-2 text-zinc-500 hover:text-zinc-300 transition-colors font-mono text-sm"
+              >
+                <SkipForward className="w-4 h-4" />
+                ANSWER ALL LATER
+              </button>
+            )}
+
+            <button
+              onClick={handleFinish}
+              disabled={loading}
+              className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold font-mono text-sm transition-all shadow-lg bg-[#d4af37] text-black hover:bg-[#c5a028] shadow-[0_0_20px_rgba(212,175,55,0.15)]"
+            >
+              FINISH <Check className="w-4 h-4" />
+            </button>
           </div>
         </div>
       </div>

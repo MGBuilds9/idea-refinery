@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { toast } from 'sonner';
 import { llm } from '../lib/llm';
 import { saveConversation, getRecentConversations, deleteConversation, getConversation } from '../services/db';
 import { SyncService } from '../services/SyncService';
 import { PromptService } from '../services/PromptService';
 import { createOrchestrator } from '../services/AgentOrchestrator';
 import { ExportService } from '../services/ExportService';
-import { compileToMarkdown, generateGapQuestions } from '../lib/IdeaSpec';
+import { compileToMarkdown, generateGapQuestions, findGaps } from '../lib/IdeaSpec';
+import { streamRefinement } from '../lib/stream-client';
 
 export function useProjectState() {
   // Navigation State
@@ -38,7 +40,10 @@ export function useProjectState() {
   const [selectedPersona, setSelectedPersona] = useState('balanced');
   const [publicBlueprintId, setPublicBlueprintId] = useState(null);
   const [initializing, setInitializing] = useState(true);
-  const [, setIsExportModalOpen] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+
+  // Streaming abort controller ref (allows cancellation of in-flight streaming requests)
+  const streamAbortRef = useRef(null);
 
   // ⚡ Bolt Optimization: Refs to hold latest state for stable callbacks
   const activeViewRef = useRef(activeView);
@@ -186,64 +191,163 @@ export function useProjectState() {
     const provider = p || llm.getDefaultProvider();
     if (!llm.getApiKey(provider)) {
       setActiveView('settings');
-      alert(`Please enter your ${provider} API key in Settings to continue.`);
+      toast.warning(`Please enter your ${provider} API key in Settings to continue.`);
       return false;
     }
     return true;
   }, []);
 
+  // Cancel any in-flight streaming request
+  const handleCancelStream = useCallback(() => {
+    if (streamAbortRef.current) {
+      streamAbortRef.current.abort();
+      streamAbortRef.current = null;
+      setLoading(false);
+      setLoadingMessage('');
+    }
+  }, []);
+
   const handleGenerateQuestions = useCallback(async (ideaOverride) => {
     if (!checkApiKey()) return;
     setLoading(true);
-    setLoadingMessage('Architect Agent: Structuring your idea...');
-    
+    setLoadingMessage('Structuring your idea...');
+
     // Use override if provided (e.g. from InputStage local state), otherwise use state
     const currentIdea = typeof ideaOverride === 'string' ? ideaOverride : stateRef.current.idea;
 
+    // Determine if we should use streaming (server sync mode + authenticated)
+    const syncMode = localStorage.getItem('sync_mode');
+    const authToken = localStorage.getItem('auth_token');
+    const serverUrl = localStorage.getItem('server_url') ||
+      (window.location.hostname === 'localhost' ? 'http://localhost:3001' : window.location.origin);
+    const useStreaming = syncMode === 'server' && authToken;
+
+    if (useStreaming) {
+      // Streaming path: Use SSE for real-time phase updates
+      const provider = llm.getDefaultProvider();
+      const apiKey = llm.getApiKey(provider);
+      const model = llm.getModelForStage('questions');
+
+      const controller = streamRefinement(
+        { idea: currentIdea, provider, apiKey, model, serverUrl, authToken },
+        {
+          onPhase: (data) => {
+            if (data.status === 'started') {
+              const phaseMessages = {
+                architect: 'Structuring your idea...',
+                critic: 'Validating for gaps...',
+                designer: 'Designing mockup...'
+              };
+              setLoadingMessage(phaseMessages[data.phase] || data.message || 'Processing...');
+            }
+            // When architect completes, update the ideaSpec immediately and auto-save
+            if (data.phase === 'architect' && data.status === 'completed' && data.data) {
+              setIdeaSpec(data.data);
+              saveProgress({ idea: currentIdea, ideaSpec: data.data, stage: 'generating' }).catch(console.error);
+            }
+          },
+          onComplete: async (data) => {
+            streamAbortRef.current = null;
+            const spec = data.spec;
+            setIdeaSpec(spec);
+
+            // Use the spec from the streaming response to find gaps client-side
+            const gaps = findGaps(spec);
+            const needsInput = gaps.filter(g => g.type === 'required').length > 0;
+
+            if (needsInput) {
+              const generatedQuestions = generateGapQuestions(gaps);
+              setQuestions(generatedQuestions);
+              setAnswers(generatedQuestions.reduce((acc, _, i) => ({ ...acc, [i]: '' }), {}));
+
+              await saveProgress({
+                idea: currentIdea,
+                questions: generatedQuestions,
+                ideaSpec: spec
+              });
+
+              setStage('questions');
+            } else {
+              const markdown = compileToMarkdown(spec);
+              setBlueprint(markdown);
+              setMasterPrompt('');
+
+              await saveProgress({
+                idea: currentIdea,
+                questions: [],
+                ideaSpec: spec,
+                blueprint: markdown
+              });
+
+              setStage('blueprint');
+            }
+
+            setLoading(false);
+            setLoadingMessage('');
+          },
+          onError: (data) => {
+            streamAbortRef.current = null;
+            console.error('Streaming error:', data.message);
+            toast.error(`Error: ${data.message}`);
+            setLoading(false);
+            setLoadingMessage('');
+          }
+        }
+      );
+
+      streamAbortRef.current = controller;
+      return; // Early return - streaming callbacks handle the rest
+    }
+
+    // Non-streaming fallback path: Direct client-side orchestration
     try {
       const provider = llm.getDefaultProvider();
       const apiKey = llm.getApiKey(provider);
-      
+
       const orchestrator = createOrchestrator({ provider, apiKey });
       if (!orchestrator) throw new Error('Failed to initialize AI agent (Missing credentials)');
 
-      // Run Architect + Critic + Gap Analysis
+      // Run Architect + Critic + Gap Analysis with phased progress
+      setLoadingMessage('Structuring your idea...');
       const result = await orchestrator.refine(currentIdea);
-      
+      setLoadingMessage('Validating for gaps...');
+
       setIdeaSpec(result.ideaSpec);
-      
+      // Save partial state immediately after architect phase
+      await saveProgress({ idea: currentIdea, ideaSpec: result.ideaSpec });
+
       if (result.needsInput) {
         // We have gaps, ask questions
         const generatedQuestions = generateGapQuestions(result.gaps);
         setQuestions(generatedQuestions);
         setAnswers(generatedQuestions.reduce((acc, _, i) => ({ ...acc, [i]: '' }), {}));
-        
-        await saveProgress({ 
+
+        await saveProgress({
           idea: currentIdea,
           questions: generatedQuestions,
-          ideaSpec: result.ideaSpec 
+          ideaSpec: result.ideaSpec
         });
-        
+
         setStage('questions');
       } else {
         // No gaps, go straight to blueprint
         const markdown = compileToMarkdown(result.ideaSpec);
         setBlueprint(markdown);
         setMasterPrompt(''); // v1.5 prompt is generated on export, not here
-        
-        await saveProgress({ 
+
+        await saveProgress({
           idea: currentIdea,
           questions: [],
           ideaSpec: result.ideaSpec,
           blueprint: markdown
         });
-        
+
         setStage('blueprint');
       }
 
     } catch (e) {
       console.error(e);
-      alert(`Error: ${e.message}`);
+      toast.error(`Error: ${e.message}`);
     } finally {
       setLoading(false);
       setLoadingMessage('');
@@ -253,7 +357,7 @@ export function useProjectState() {
   const handleGenerateBlueprint = useCallback(async (answersOverride) => {
     if (!checkApiKey()) return;
     setLoading(true);
-    setLoadingMessage('Architect Agent: Updating spec with your answers...');
+    setLoadingMessage('Structuring your idea...');
     setStage('generating');
     
     try {
@@ -298,7 +402,7 @@ export function useProjectState() {
 
       setStage('blueprint');
     } catch (e) {
-      alert(`Error: ${e.message}`);
+      toast.error(`Error: ${e.message}`);
       setStage('questions');
     } finally {
       setLoading(false);
@@ -418,7 +522,7 @@ export function useProjectState() {
   const handleGenerateMockup = useCallback(async () => {
     if (!checkApiKey()) return;
     setLoading(true);
-    setLoadingMessage('Designer Agent: Creating high-fidelity mockup...');
+    setLoadingMessage('Designing mockup...');
     setStage('mockup');
     try {
       const provider = llm.getDefaultProvider();
@@ -450,10 +554,10 @@ export function useProjectState() {
       }
 
       setHtmlMockup(html);
-      await saveProgress({ htmlMockup: html });
+      await saveProgress({ htmlMockup: html, stage: 'mockup' });
 
     } catch (e) {
-      alert(`Error: ${e.message}`);
+      toast.error(`Error: ${e.message}`);
       setStage('blueprint');
     } finally {
       setLoading(false);
@@ -510,7 +614,9 @@ export function useProjectState() {
       blueprintTab, setBlueprintTab,
       selectedPersona, setSelectedPersona,
       publicBlueprintId, setPublicBlueprintId,
-      initializing, setInitializing
+      initializing, setInitializing,
+      isExportModalOpen,
+      proposedSpec
     },
     actions: {
       loadHistory,
@@ -523,6 +629,7 @@ export function useProjectState() {
       handleRefineBlueprint,
       handleAcceptRefinement,
       handleRejectRefinement,
+      handleCancelStream,
       setProposedSpec,
       setIsExportModalOpen,
       handleExportPackage,
