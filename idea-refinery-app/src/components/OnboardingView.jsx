@@ -163,7 +163,7 @@ export default function OnboardingView({ onComplete }) {
                   <h2 className="text-xl font-semibold">Connect Intelligence</h2>
                 </div>
 
-                <div className="space-y-4">
+                <form onSubmit={e => e.preventDefault()} className="space-y-4">
                   <div>
                     <label className="block text-sm text-zinc-400 mb-1">Provider</label>
                     <select
@@ -198,7 +198,7 @@ export default function OnboardingView({ onComplete }) {
                     </p>
                   </div>
                   {error && <p className="text-red-400 text-sm">{error}</p>}
-                </div>
+                </form>
 
                 <button
                   onClick={validateApiKey}
@@ -245,7 +245,7 @@ export default function OnboardingView({ onComplete }) {
                 </div>
                 <p className="text-xs text-zinc-500 -mt-4 ml-[72px]">Optional -- configure later in Settings</p>
 
-                <div className="space-y-4">
+                <form onSubmit={e => e.preventDefault()} className="space-y-4">
                   {/* Server Connection */}
                   <div className="p-4 bg-white/5 rounded-lg border border-white/10">
                     <div className="flex items-center gap-2 mb-3">
@@ -303,7 +303,7 @@ export default function OnboardingView({ onComplete }) {
                   </div>
 
                   {error && <p className="text-red-400 text-sm">{error}</p>}
-                </div>
+                </form>
 
                 <button
                   onClick={handleFinishSetup}

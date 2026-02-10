@@ -305,7 +305,7 @@ export default function SettingsView() {
 
           {/* API Keys Tab */}
           {activeTab === 'keys' && (
-            <div className="space-y-6 animate-fade-in">
+            <form onSubmit={e => e.preventDefault()} className="space-y-6 animate-fade-in">
               <div>
                 <label className="block text-sm font-semibold text-white mb-2">
                   Default Provider
@@ -345,7 +345,7 @@ export default function SettingsView() {
                   </div>
                 </div>
               ))}
-            </div>
+            </form>
           )}
 
           {/* AI Configuration Tab */}
@@ -507,7 +507,7 @@ export default function SettingsView() {
 
               {!isAuthenticated ? (
                 <>
-                  <div className="p-6 bg-white/5 rounded-xl border border-white/10">
+                  <form onSubmit={e => e.preventDefault()} className="p-6 bg-white/5 rounded-xl border border-white/10">
                     <div className="flex items-center gap-3 mb-4">
                       <LogIn className="w-5 h-5 text-[#d4af37]" />
                       <p className="text-white font-semibold font-sans">Server Login</p>
@@ -558,7 +558,7 @@ export default function SettingsView() {
                       <LogIn className="w-4 h-4" />
                       Login to Server
                     </button>
-                  </div>
+                  </form>
                 </>
               ) : (
                 <>
@@ -592,7 +592,7 @@ export default function SettingsView() {
               <div className="h-px bg-white/10 my-8" />
 
               {/* Email Configuration */}
-              <div className="p-6 bg-white/5 rounded-xl border border-white/10">
+              <form onSubmit={e => e.preventDefault()} className="p-6 bg-white/5 rounded-xl border border-white/10">
                 <div className="flex items-center gap-3 mb-3">
                   <Server className="w-5 h-5 text-[#d4af37]" />
                   <p className="text-white font-semibold font-sans">Email Configuration (Resend)</p>
@@ -662,7 +662,7 @@ export default function SettingsView() {
                     Save & Send Test Email
                   </button>
                 </div>
-              </div>
+              </form>
 
               <div className="h-px bg-white/10 my-8" />
 
@@ -714,7 +714,7 @@ export default function SettingsView() {
 
           {/* Security Tab */}
           {activeTab === 'security' && (
-            <div className="space-y-6 animate-fade-in">
+            <form onSubmit={e => e.preventDefault()} className="space-y-6 animate-fade-in">
               <div className="p-6 bg-white/5 rounded-xl border border-white/10">
                 <div className="flex items-center gap-3 mb-3">
                   <Lock className="w-5 h-5 text-[#d4af37]" />
@@ -841,7 +841,7 @@ export default function SettingsView() {
               >
                 Change Password
               </button>
-            </div>
+            </form>
           )}
 
           {/* Save Button */}
