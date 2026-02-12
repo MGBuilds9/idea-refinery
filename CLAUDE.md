@@ -34,6 +34,10 @@ npm test          # Vitest unit tests (will be added)
 ### February 5, 2026 - Initialization
 - Created project CLAUDE.md template.
 
+### February 12, 2026 - Repo Hygiene #2: Test Fixes
+- **Changes:** Fixed test environment by mocking `localStorage` in `src/__tests__/setup.js`. Installed missing dependencies.
+- **Tests:** 45/45 passing (4 test files).
+
 ### February 10, 2026 - Phase 1 Foundation
 - Filled in all TBD fields with actual project details.
 - Updated AI model IDs to latest versions (Claude Sonnet 4.5, Haiku 4.5, Opus 4.6).
