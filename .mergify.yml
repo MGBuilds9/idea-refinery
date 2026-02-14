@@ -1,0 +1,15 @@
+pull_request_rules:
+  - name: Auto-merge when CI passes and labeled
+    conditions:
+      - label=auto-merge
+      - check-success=baseline
+      - "#review-threads-unresolved=0"
+    actions:
+      merge:
+        method: squash
+
+  - name: Delete branch after merge
+    conditions:
+      - merged
+    actions:
+      delete_head_branch: {}
