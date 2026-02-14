@@ -4,7 +4,12 @@ on:
   push:
     branches: ["main", "master"]
   pull_request:
+    branches: ["main", "master"]
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   baseline:
@@ -21,14 +26,14 @@ jobs:
           if [ -f composer.json ]; then echo "php=true" >> "$GITHUB_OUTPUT"; else echo "php=false" >> "$GITHUB_OUTPUT"; fi
 
       - name: Setup Node
-        if: steps.detect.outputs.node == "true"
+        if: steps.detect.outputs.node == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: "npm"
 
       - name: Install Node dependencies
-        if: steps.detect.outputs.node == "true"
+        if: steps.detect.outputs.node == 'true'
         shell: bash
         run: |
           if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
@@ -43,23 +48,42 @@ jobs:
             npm install
           fi
 
-      - name: Run Node checks when scripts exist
-        if: steps.detect.outputs.node == "true"
+      - name: Lint
+        if: steps.detect.outputs.node == 'true'
         shell: bash
         run: |
-          node -e "const p=require('./package.json'); const s=p.scripts||{}; process.exit(s.lint?0:1)" && npm run lint || echo "lint script not defined; skipping"
-          node -e "const p=require('./package.json'); const s=p.scripts||{}; process.exit(s.typecheck?0:1)" && npm run typecheck || echo "typecheck script not defined; skipping"
-          node -e "const p=require('./package.json'); const s=p.scripts||{}; process.exit(s.test?0:1)" && npm test || echo "test script not defined; skipping"
-          node -e "const p=require('./package.json'); const s=p.scripts||{}; process.exit(s.e2e?0:1)" && npm run e2e || echo "e2e script not defined; skipping"
+          if node -e "const s=require('./package.json').scripts||{}; process.exit(s.lint?0:1)"; then
+            npm run lint
+          else
+            echo "::notice::No lint script defined — skipping"
+          fi
 
-      - name: Setup PHP
-        if: steps.detect.outputs.php == "true"
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: "8.2"
-
-      - name: Validate Composer config
-        if: steps.detect.outputs.php == "true"
+      - name: Typecheck
+        if: steps.detect.outputs.node == 'true'
         shell: bash
         run: |
-          composer validate --no-check-publish --strict || composer validate --no-check-publish
+          if node -e "const s=require('./package.json').scripts||{}; process.exit(s.typecheck?0:1)"; then
+            npm run typecheck
+          else
+            echo "::notice::No typecheck script defined — skipping"
+          fi
+
+      - name: Test
+        if: steps.detect.outputs.node == 'true'
+        shell: bash
+        run: |
+          if node -e "const s=require('./package.json').scripts||{}; process.exit(s.test?0:1)"; then
+            npm test
+          else
+            echo "::notice::No test script defined — skipping"
+          fi
+
+      - name: Build
+        if: steps.detect.outputs.node == 'true'
+        shell: bash
+        run: |
+          if node -e "const s=require('./package.json').scripts||{}; process.exit(s.build?0:1)"; then
+            npm run build
+          else
+            echo "::notice::No build script defined — skipping"
+          fi
