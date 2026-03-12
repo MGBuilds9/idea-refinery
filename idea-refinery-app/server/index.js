@@ -7,7 +7,7 @@ import jwt from 'jsonwebtoken';
 import { Resend } from 'resend';
 import crypto from 'crypto';
 import { pool } from './db.js';
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -177,7 +177,7 @@ const refineLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 10, // 10 requests per minute per user for expensive AI operations
   message: { error: 'Too many refinement requests. Please wait a moment.' },
-  keyGenerator: (req) => req.user?.id || req.ip,
+  keyGenerator: (req) => req.user?.id || ipKeyGenerator(req.ip),
 });
 
 // Apply rate limits
@@ -238,6 +238,7 @@ app.use(express.static(distPath));
 
 // Health check (enhanced)
 app.get('/health', async (req, res) => {
+  const distReady = fs.existsSync(path.join(distPath, 'index.html'));
   const health = {
     status: 'ok',
     uptime: process.uptime(),
@@ -245,7 +246,8 @@ app.get('/health', async (req, res) => {
     memory: {
       used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + 'MB',
       total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024) + 'MB'
-    }
+    },
+    frontend: distReady ? 'ready' : 'missing'
   };
 
   // Check DB connectivity
@@ -254,6 +256,10 @@ app.get('/health', async (req, res) => {
     health.database = 'connected';
   } catch (err) {
     health.database = 'disconnected';
+    health.status = 'degraded';
+  }
+
+  if (!distReady) {
     health.status = 'degraded';
   }
 

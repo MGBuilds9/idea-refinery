@@ -7,7 +7,7 @@ services:
       - "${PORT:-3001}:${PORT:-3001}" # Bind to all interfaces
     environment:
       - PORT=${PORT:-3001}
-      - DATABASE_URL=postgres://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-idearefinery}
+      - DATABASE_URL=postgres://postgres:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-idearefinery}
       - JWT_SECRET=${JWT_SECRET:-dev-secret-key-change-in-prod}
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-https://ideas.mkgbuilds.com,capacitor://localhost,http://localhost}
       - NODE_ENV=${NODE_ENV:-production}
