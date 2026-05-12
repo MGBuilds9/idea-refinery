@@ -236,7 +236,24 @@ app.use('/assets', express.static(path.join(distPath, 'assets')));
 
 app.use(express.static(distPath));
 
-// Health check (enhanced)
+// Liveness probe — used by Docker HEALTHCHECK. Only fails if the container
+// itself is broken (process dead or frontend dist missing). DB is treated
+// as an external dependency and does not affect liveness, because the
+// client uses Dexie.js (IndexedDB) for core UX and the app remains usable
+// when Postgres is unreachable.
+app.get('/health/live', (req, res) => {
+  const distReady = fs.existsSync(path.join(distPath, 'index.html'));
+  res.status(distReady ? 200 : 503).json({
+    status: distReady ? 'ok' : 'degraded',
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+    frontend: distReady ? 'ready' : 'missing'
+  });
+});
+
+// Readiness/health check (enhanced) — full dependency status, used by
+// monitoring/observability. Returns 503 when DB is unreachable so alerts
+// can fire, but this does NOT mean the container should be restarted.
 app.get('/health', async (req, res) => {
   const distReady = fs.existsSync(path.join(distPath, 'index.html'));
   const health = {
@@ -269,7 +286,7 @@ app.get('/health', async (req, res) => {
 // Authentication Middleware
 const authenticateToken = (req, res, next) => {
   // Allow login/register/health without token
-  if (req.path === '/api/auth/login' || req.path === '/api/auth/register' || req.path === '/health') {
+  if (req.path === '/api/auth/login' || req.path === '/api/auth/register' || req.path === '/health' || req.path === '/health/live') {
     return next();
   }
 
@@ -695,7 +712,7 @@ app.post('/api/email/send', authenticateToken, async (req, res) => {
 // Or we can just apply it globally for /api and exclude login.
 app.use('/api', (req, res, next) => {
   // Public endpoints - no auth required
-  if (req.path === '/auth/login' || req.path === '/auth/register' || req.path === '/health') return next();
+  if (req.path === '/auth/login' || req.path === '/auth/register' || req.path === '/health' || req.path === '/health/live') return next();
 
   // Allow GET requests to /api/prompts (read default prompts without auth)
   // POST requests to /api/prompts still require auth
