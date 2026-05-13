@@ -10,19 +10,23 @@ services:
       # Discrete DB env vars (preferred — avoids URL-parser failures when
       # POSTGRES_PASSWORD contains RFC-3986-reserved chars like '@' or '/').
       # server/db.js prefers these over DATABASE_URL.
-      - DATABASE_HOST=postgres
+      # NOTE: Host is `idea-db` not `postgres` because Coolify's coolify-db
+      # container claims the `postgres` alias on the shared `coolify` network,
+      # which causes Docker DNS to round-robin between the two and produces
+      # confusing "password authentication failed" errors.
+      - DATABASE_HOST=idea-db
       - DATABASE_PORT=5432
       - DATABASE_USER=${POSTGRES_USER:-postgres}
       - DATABASE_PASSWORD=${POSTGRES_PASSWORD:-password}
       - DATABASE_DB=${POSTGRES_DB:-idearefinery}
       # Retained for backward compat / legacy code paths (may be broken if
       # POSTGRES_PASSWORD has special chars; discrete vars above take priority).
-      - DATABASE_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-idearefinery}
+      - DATABASE_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@idea-db:5432/${POSTGRES_DB:-idearefinery}
       - JWT_SECRET=${JWT_SECRET:-dev-secret-key-change-in-prod}
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-https://ideas.mkgbuilds.com,capacitor://localhost,http://localhost}
       - NODE_ENV=${NODE_ENV:-production}
     depends_on:
-      postgres:
+      idea-db:
         condition: service_healthy
     healthcheck:
       test: [ "CMD", "node", "-e", "require('http').get('http://localhost:${PORT:-3001}/health/live', (r) => process.exit(r.statusCode === 200 ? 0 : 1))" ]
@@ -33,7 +37,7 @@ services:
     networks:
       - idea-refinery-network
 
-  postgres:
+  idea-db:
     image: postgres:15-alpine
     container_name: idea-refinery-db
     restart: unless-stopped
