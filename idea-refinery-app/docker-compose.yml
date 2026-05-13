@@ -7,7 +7,17 @@ services:
       - "${PORT:-3001}:${PORT:-3001}" # Bind to all interfaces
     environment:
       - PORT=${PORT:-3001}
-      - DATABASE_URL=postgres://postgres:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-idearefinery}
+      # Discrete DB env vars (preferred — avoids URL-parser failures when
+      # POSTGRES_PASSWORD contains RFC-3986-reserved chars like '@' or '/').
+      # server/db.js prefers these over DATABASE_URL.
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_USER=${POSTGRES_USER:-postgres}
+      - DATABASE_PASSWORD=${POSTGRES_PASSWORD:-password}
+      - DATABASE_DB=${POSTGRES_DB:-idearefinery}
+      # Retained for backward compat / legacy code paths (may be broken if
+      # POSTGRES_PASSWORD has special chars; discrete vars above take priority).
+      - DATABASE_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-idearefinery}
       - JWT_SECRET=${JWT_SECRET:-dev-secret-key-change-in-prod}
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-https://ideas.mkgbuilds.com,capacitor://localhost,http://localhost}
       - NODE_ENV=${NODE_ENV:-production}

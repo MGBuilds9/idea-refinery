@@ -2,26 +2,50 @@ import pg from 'pg';
 import bcrypt from 'bcrypt';
 const { Pool } = pg;
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-});
+// Build pool config. Prefer discrete env vars when present (avoids URL-parser
+// failures when password contains '@', '/', or other RFC-3986-reserved chars
+// that compose ${VAR} interpolation does not URL-encode). Falls back to
+// connectionString for legacy/dev environments that set DATABASE_URL with a
+// safe password.
+function buildPoolConfig() {
+  const user = process.env.DATABASE_USER || process.env.POSTGRES_USER;
+  const password = process.env.DATABASE_PASSWORD || process.env.POSTGRES_PASSWORD;
+  const host = process.env.DATABASE_HOST || process.env.POSTGRES_HOST;
+  const database = process.env.DATABASE_DB || process.env.POSTGRES_DB;
+  const port = parseInt(process.env.DATABASE_PORT || process.env.POSTGRES_PORT || '5432', 10);
 
-// Debug: Log connection details (masked)
-try {
+  // Discrete-vars path: use if at minimum user, password, host, and database are set.
+  if (user && password && host && database) {
+    console.log(`🔌 Database Config (discrete env):
+      Host: ${host}
+      Port: ${port}
+      Database: ${database}
+      User: ${user}
+      Password: ****`);
+    return { user, password, host, port, database };
+  }
+
+  // Fallback: connectionString
   if (process.env.DATABASE_URL) {
-    const url = new URL(process.env.DATABASE_URL);
-    console.log(`🔌 Database Config:
+    try {
+      const url = new URL(process.env.DATABASE_URL);
+      console.log(`🔌 Database Config (connectionString):
       Host: ${url.hostname}
       Port: ${url.port}
       Database: ${url.pathname.substring(1)}
       User: ${url.username}
       Password: ${url.password ? '****' : 'none'}`);
-  } else {
-    console.error('❌ FATAL: DATABASE_URL is not defined!');
+    } catch (e) {
+      console.error('❌ Invalid DATABASE_URL format (likely unescaped special chars in password) — set DATABASE_USER/DATABASE_PASSWORD/DATABASE_HOST/DATABASE_DB instead');
+    }
+    return { connectionString: process.env.DATABASE_URL };
   }
-} catch (e) {
-  console.error('❌ Invalid DATABASE_URL format');
+
+  console.error('❌ FATAL: No database config — set DATABASE_URL or discrete DATABASE_USER/PASSWORD/HOST/DB env vars');
+  return {};
 }
+
+const pool = new Pool(buildPoolConfig());
 
 // Initialize database
 const initDb = async () => {
@@ -149,7 +173,7 @@ const initDb = async () => {
   }
 };
 
-if (process.env.DATABASE_URL) {
+if (process.env.DATABASE_URL || (process.env.DATABASE_HOST || process.env.POSTGRES_HOST)) {
   initDb();
 }
 
