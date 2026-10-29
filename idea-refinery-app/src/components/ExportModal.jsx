@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
-import { Download, FileText, Code, ListChecks, Check, X, Shield, Sparkles } from 'lucide-react';
+import { Download, FileText, Code, ListChecks, Check, X, Shield, Sparkles, Bot } from 'lucide-react';
 
 const ExportOption = ({ id, icon: Icon, title, description, isSelected, onClick }) => {
-  // eslint-disable-next-line no-unused-vars
   const _ = Icon;
   return (
     <button
@@ -36,6 +35,7 @@ const ExportModal = ({ isOpen, onClose, onExport }) => {
     blueprint: true,
     cursorRules: true,
     implementationPlan: true,
+    promptMd: true,
     mockupHtml: false
   });
 
@@ -103,6 +103,14 @@ const ExportModal = ({ isOpen, onClose, onExport }) => {
               title="Implementation Plan"
               description="Step-by-step technical plan for LLM execution."
               isSelected={options.implementationPlan}
+              onClick={toggleOption}
+            />
+            <ExportOption
+              id="promptMd"
+              icon={Bot}
+              title="AI Build Prompts"
+              description="Prompt files for AI coding tools, including OpenCode."
+              isSelected={options.promptMd}
               onClick={toggleOption}
             />
             <ExportOption

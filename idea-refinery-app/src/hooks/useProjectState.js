@@ -516,7 +516,7 @@ export function useProjectState() {
     if (!ideaSpec) return;
     
     // v1.5: Always download as a single ZIP package based on selected options
-    ExportService.downloadZip(ideaSpec, blueprint, htmlMockup, options);
+    await ExportService.downloadZip(ideaSpec, blueprint, htmlMockup, options);
   }, [ideaSpec, blueprint, htmlMockup]);
 
   const handleGenerateMockup = useCallback(async () => {

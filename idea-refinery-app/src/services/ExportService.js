@@ -21,14 +21,15 @@ export const ExportService = {
    * @param {string} htmlMockup - Generated HTML mockup
    * @param {Object} options - Flags for which files to include
    */
-  async downloadZip(ideaSpec, blueprint, htmlMockup, options = {}) {
+  createZip(ideaSpec, blueprint, htmlMockup, options = {}) {
     // Default to all if no options provided
     const includeAll = Object.keys(options).length === 0;
     
     const zip = new JSZip();
-    const projectName = (ideaSpec.meta?.name || "project")
+    const projectName = ((ideaSpec.meta?.name || "project")
       .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-");
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")) || "project";
 
     // Add files to zip based on options
     if (includeAll || options.cursorRules) {
@@ -39,15 +40,7 @@ export const ExportService = {
         zip.file(`${projectName}-implementation_plan.md`, this.toImplementationPlan(ideaSpec));
     }
     
-    if (includeAll || options.promptMd) { // prompt.md isn't inherently in options of ExportModal? Check options keys.
-        // ExportModal uses: blueprint, cursorRules, implementationPlan, mockupHtml.
-        // prompt.md seems invalid in ExportModal state? 
-        // Wait, ExportModal has: blueprint, cursorRules, implementationPlan, mockupHtml.
-        // prompt.md is usually part of "context dump". 
-        // Let's assume prompt.md is included if 'blueprint' is included or add it to 'implementationPlan'?
-        // Actually ExportModal doesn't list 'prompt.md'. 
-        // I'll include it if implementationPlan is selected, as a bonus? Or blueprint?
-        // Let's include it if 'blueprint' is selected since it's the "context".
+    if (includeAll || options.promptMd) {
         zip.file(`${projectName}-prompt.md`, this.toPromptMd(ideaSpec, blueprint));
         zip.file(`${projectName}-opencode.md`, this.toOpenCodePrompt(ideaSpec));
     }
@@ -56,7 +49,6 @@ export const ExportService = {
       if (blueprint) {
         zip.file(`${projectName}-BLUEPRINT.md`, blueprint);
       }
-      // Also adding the prompts here if blueprint selected, to match above logic if I didn't separate it
     }
     
     if (includeAll || options.mockupHtml) {
@@ -64,6 +56,12 @@ export const ExportService = {
         zip.file(`${projectName}-mockup.html`, htmlMockup);
       }
     }
+
+    return { zip, projectName };
+  },
+
+  async downloadZip(ideaSpec, blueprint, htmlMockup, options = {}) {
+    const { zip, projectName } = this.createZip(ideaSpec, blueprint, htmlMockup, options);
 
     // Generate and trigger download
     const content = await zip.generateAsync({ type: "blob" });
@@ -375,6 +373,6 @@ ${prompt}`;
    * @param {string} [htmlMockup] - Optional HTML mockup
    */
   exportAll(ideaSpec, blueprint = "", htmlMockup = "") {
-    this.downloadZip(ideaSpec, blueprint, htmlMockup);
+    return this.downloadZip(ideaSpec, blueprint, htmlMockup);
   },
 };
