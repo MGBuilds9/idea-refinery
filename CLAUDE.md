@@ -31,6 +31,10 @@ npm test          # Vitest unit tests (will be added)
 
 ## Session Log
 
+### November 13, 2026 - Paperthin cleanup rollout
+- Vendored only the Paperthin `debloat` skill at `61143228dae8549f4ebc3e9f3d8d65cb4bbe7764` (PRs for tooling, dead code, comment bloat, and unused dependencies). Nothing merged or deployed.
+- **Tests:** 45/45 unit tests, production build, and Playwright 19/19 on each cleanup branch.
+
 ### February 5, 2026 - Initialization
 - Created project CLAUDE.md template.
 
