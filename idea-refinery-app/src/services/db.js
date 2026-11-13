@@ -135,30 +135,6 @@ export async function getSyncToken() {
   return setting ? setting.value : null;
 }
 
-export async function pushItem(item, apiBaseUrl) {
-  const token = await getAuthToken();
-  if (!token) return;
-
-  // Save locally first
-  await db.items.put(item);
-
-  try {
-    const response = await fetch(`${apiBaseUrl}/api/sync/push`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({ items: [item] })
-    });
-    
-    if (!response.ok) throw new Error('Push failed');
-    return await response.json();
-  } catch (e) {
-    console.error('Push error:', e);
-  }
-}
-
 export async function pullItems(apiBaseUrl) {
   const token = await getAuthToken();
   if (!token) return;

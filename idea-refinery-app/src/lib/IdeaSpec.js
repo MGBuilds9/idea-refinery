@@ -184,15 +184,6 @@ export function findGaps(spec) {
 }
 
 /**
- * Get required gaps only (for blocking progression)
- * @param {Object} spec - IdeaSpec to analyze
- * @returns {Array} Array of required gaps
- */
-export function getRequiredGaps(spec) {
-  return findGaps(spec).filter(g => g.type === 'required');
-}
-
-/**
  * Generate questions to fill gaps
  * @param {Array} gaps - Gap array from findGaps
  * @returns {Array<string>} Questions to ask the user
