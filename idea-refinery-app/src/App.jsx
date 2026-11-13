@@ -51,8 +51,6 @@ function App() {
   const [forcingPinSetup, setForcingPinSetup] = useState(false);
   // Track if we just unlocked to prevent re-locking
   const [sessionUnlocked, setSessionUnlocked] = useState(false);
-  // eslint-disable-next-line no-unused-vars
-  const [activePin, setActivePin] = useState(null);
 
   // DB Checks and PIN Lock
   useEffect(() => {
@@ -111,7 +109,6 @@ function App() {
       return;
     }
 
-    setActivePin(pin);
     // Load encrypted API keys and set active PIN on llm service
     await llm.loadEncryptedKeys(pin);
     llm.setActivePin(pin);
@@ -136,7 +133,6 @@ function App() {
       setForcingPinSetup(false);
       
       // Auto-unlock with the new PIN
-      setActivePin(newPin);
       llm.setActivePin(newPin);
       
       // Attempt to migrate any lingering plaintext keys now that we have a PIN
