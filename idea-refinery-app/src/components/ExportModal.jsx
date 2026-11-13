@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Download, FileText, Code, ListChecks, Check, X, Shield, Sparkles } from 'lucide-react';
 
 const ExportOption = ({ id, icon: Icon, title, description, isSelected, onClick }) => {
-  // eslint-disable-next-line no-unused-vars
   const _ = Icon;
   return (
     <button

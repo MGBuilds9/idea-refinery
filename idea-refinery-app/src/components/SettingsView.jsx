@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Save, Eye, EyeOff, Zap, Bot, Settings2, Lock, Server, LogIn, LogOut, Download, Database, CloudOff } from 'lucide-react';
 import { toast } from 'sonner';
-import { useTheme } from '../contexts/ThemeContext';
 import { llm, AVAILABLE_MODELS } from '../lib/llm';
 import { exportAllData } from '../services/db';
 import { SecureStorage } from '../services/secure_storage';
