@@ -982,27 +982,3 @@ app.get('/api/public/my/list', authenticateToken, async (req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 Proxy server running on http://localhost:${PORT}`);
 });
-
-// All other GET requests not handled before will return our React app
-// Fix for Express 5: Use regex or capture group for wildcard
-// app.get('/*', (req, res) => {
-//   // Don't serve index.html for API calls or assets that were missed
-//   if (req.path.startsWith('/api') || req.path.startsWith('/assets')) {
-//     console.warn(`⚠️  404 - Asset/API not found: ${req.path}`);
-//     return res.status(404).send('Not Found');
-//   }
-
-//   const indexPath = path.resolve(distPath, 'index.html');
-//   if (fs.existsSync(indexPath)) {
-//     console.log(`📄 Serving index.html for route: ${req.path}`);
-//     res.sendFile(indexPath, (err) => {
-//       if (err) {
-//         console.error('❌ Error sending index.html:', err);
-//         res.status(500).send('Server Error');
-//       }
-//     });
-//   } else {
-//     console.error('❌ index.html not found at:', indexPath);
-//     res.status(404).send('Application not built (index.html missing)');
-//   }
-// });

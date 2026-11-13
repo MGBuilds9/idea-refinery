@@ -220,11 +220,7 @@ class LLMService {
     // Update internal state
     this.apiKeys = { ...this.apiKeys, ...keys };
     
-    // Legacy localStorage writes REMOVED for security
-    // Object.entries(keys).forEach(([provider, key]) => {
-    //   localStorage.setItem(`${provider}_key`, key);
-    // });
-
+    // Legacy localStorage writes removed for security.
     // Enforce encrypted save
     if (this.activePin) {
       console.log('PIN active, saving encrypted...');

@@ -7,19 +7,16 @@ class ErrorBoundary extends React.Component {
   }
 
   static getDerivedStateFromError(error) {
-    // Update state so the next render will show the fallback UI.
     return { hasError: true, error };
   }
 
   componentDidCatch(error, errorInfo) {
-    // You can also log the error to an error reporting service
     console.error("Uncaught error:", error, errorInfo);
     this.setState({ errorInfo });
   }
 
   render() {
     if (this.state.hasError) {
-      // You can render any custom fallback UI
       return (
         <div className="min-h-screen bg-[#09090b] text-white flex flex-col items-center justify-center p-6">
           <div className="max-w-md w-full bg-red-900/20 border border-red-500/50 rounded-lg p-6">
