@@ -53,7 +53,7 @@ export function streamRefinement({ idea, provider, apiKey, model, serverUrl, aut
             } else if (currentEvent === 'error' && callbacks.onError) {
               callbacks.onError(data);
             }
-          } catch (e) {
+          } catch {
             console.warn('Failed to parse SSE data:', line);
           }
           currentEvent = null;
